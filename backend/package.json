@@ -1,0 +1,25 @@
+{
+  "name": "backend_cv",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [
+    "cv"
+  ],
+  "license": "ISC",
+  "author": "hoang,van,minh",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon --inspect server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "mysql2": "^3.15.3",
+    "sequelize": "^6.37.7"
+  },
+  "devDependencies": {
+    "morgan": "^1.10.1",
+    "nodemon": "^3.1.10"
+  }
+}
