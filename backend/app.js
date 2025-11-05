@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const express = require('express');
 const morgan = require('morgan');
 const app = express();
@@ -22,3 +23,19 @@ app.use('/api/tags', tagRouter);
 app.use('/api/users', userRouter);
 
 module.exports = app;
+=======
+const express = require('express')
+const morgan = require('morgan')
+const app = express()
+
+
+// app.use(morgan('combined'))
+app.get('/', (req, res) => { res.send("hello word !") })
+
+const userRouter = require('./src/routes/userRoute')
+
+app.use("/user", userRouter);
+
+
+module.exports = app
+>>>>>>> 3690667a0b9b113f38a2a081774f941556a9d74b

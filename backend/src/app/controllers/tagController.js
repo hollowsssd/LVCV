@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const { Tag } = require('../../../models');
 
 class tagController {
@@ -60,3 +61,13 @@ class tagController {
 }
 
 module.exports = new tagController();
+=======
+class tagController {
+    index(req, res) {
+        const temp = "Tag";
+        res.send(temp)
+    }
+}
+
+module.exports = new tagController();
+>>>>>>> 3690667a0b9b113f38a2a081774f941556a9d74b

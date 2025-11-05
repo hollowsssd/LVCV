@@ -11,8 +11,12 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+<<<<<<< HEAD
       // Tag có nhiều Job (nhiều-nhiều)
       Tag.belongsToMany(models.Job, { through: models.Tag_job, foreignKey: 'tagId', otherKey: 'jobId' });
+=======
+      Tag.belongsToMany(models.Tag, { through: Tag_jobs, foreignKey: 'tagId', otherKey:'jobId' })
+>>>>>>> 3690667a0b9b113f38a2a081774f941556a9d74b
     }
   }
   Tag.init({

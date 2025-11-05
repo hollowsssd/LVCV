@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const { Candidate } = require('../../../models');
 
 class candidateController {
@@ -60,3 +61,13 @@ class candidateController {
 }
 
 module.exports = new candidateController();
+=======
+class candidateController {
+    index(req, res) {
+        const temp = "candidate";
+        res.send(temp)
+    }
+}
+
+module.exports = new candidateController();
+>>>>>>> 3690667a0b9b113f38a2a081774f941556a9d74b

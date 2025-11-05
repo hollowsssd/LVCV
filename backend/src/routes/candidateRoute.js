@@ -4,6 +4,7 @@ const candidateController = require('../app/controllers/candidateController');
 
 
 
+<<<<<<< HEAD
 // Danh sách
 router.get('/', candidateController.index);
 
@@ -19,6 +20,10 @@ router.put('/:id', candidateController.update);
 // Xóa
 router.delete('/:id', candidateController.delete);
 
+=======
+router.get('/', candidateController.index);
+
+>>>>>>> 3690667a0b9b113f38a2a081774f941556a9d74b
 
 
 module.exports = router;
