@@ -11,16 +11,12 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-<<<<<<< HEAD
         // Mỗi CV thuộc về 1 Candidate
         Cv.belongsTo(models.Candidate, { foreignKey: 'candidateId', as: 'Candidate' });
 
         // Một CV có thể được dùng cho nhiều Application
         Cv.hasMany(models.Application, { foreignKey: 'cvId', as: 'Applications' });
-=======
-      Cv.belongsToMany(models.Cv, { foreignKey: 'candidateId', as: 'Candidates' })
-      Cv.hasMany(models.Cv, { foreignKey: 'cvId', as: 'Applications' })
->>>>>>> 3690667a0b9b113f38a2a081774f941556a9d74b
+
     }
   }
   Cv.init({
