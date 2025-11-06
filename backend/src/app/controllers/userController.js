@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 const { User } = require('../../../models');
 
 class userController {
@@ -61,13 +60,4 @@ class userController {
 }
 
 module.exports = new userController();
-=======
-class userController {
-    index(req, res) {
-        const temp = "user";
-        res.send(temp)
-    }
-}
 
-module.exports = new userController();
->>>>>>> 3690667a0b9b113f38a2a081774f941556a9d74b

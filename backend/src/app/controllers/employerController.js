@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 const { Employer } = require('../../../models');
 
 class employerController {
@@ -61,13 +60,4 @@ class employerController {
 }
 
 module.exports = new employerController();
-=======
-class employerController {
-    index(req, res) {
-        const temp = "employer";
-        res.send(temp)
-    }
-}
 
-module.exports = new employerController();
->>>>>>> 3690667a0b9b113f38a2a081774f941556a9d74b

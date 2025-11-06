@@ -11,7 +11,6 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-<<<<<<< HEAD
       // Job có nhiều Tag (nhiều-nhiều)
       Job.belongsToMany(models.Tag, { through: 'Tag_jobs', foreignKey: 'jobId', otherKey: 'tagId' });
 
@@ -20,11 +19,7 @@ module.exports = (sequelize, DataTypes) => {
 
       // Job có nhiều Application
       Job.hasMany(models.Application, { foreignKey: 'jobId', as: 'Applications' });
-=======
-      Job.belongsToMany(models.Job, { through: Tag_jobs, foreignKey: 'jobId', otherKey: 'tagId' })
-      Job.belongsToMany(models.Job, { foreignKey: 'employerId', as: 'Employers' })
-      Job.hasMany(models.Job, { foreignKey: 'jobId', as: 'Applications' })
->>>>>>> 3690667a0b9b113f38a2a081774f941556a9d74b
+
     }
   }
   Job.init({

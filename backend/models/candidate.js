@@ -10,7 +10,6 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-<<<<<<< HEAD
       // Candidate thuộc về 1 User
       Candidate.belongsTo(models.User, { foreignKey: 'userId', as: 'User' });
 
@@ -19,11 +18,7 @@ module.exports = (sequelize, DataTypes) => {
 
       // Candidate có nhiều Application
       Candidate.hasMany(models.Application, { foreignKey: 'candidateId', as: 'Applications' });
-=======
-      Candidate.belongsTo(models.user, { foreignKey: 'userId', as: 'User' })
-      Candidate.hasMany(models.Candidate, { foreignKey: 'candidateId', as: 'Cvs' })
-      Candidate.hasMany(models.Candidate, { foreignKey: 'candidateId', as: 'Applications' })
->>>>>>> 3690667a0b9b113f38a2a081774f941556a9d74b
+
     }
   }
   Candidate.init({

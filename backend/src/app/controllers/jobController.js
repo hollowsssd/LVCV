@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 const { Job } = require('../../../models');
 
 class jobController {
@@ -57,13 +56,6 @@ class jobController {
         } catch (error) {
             res.status(500).json({ error: 'Lỗi xóa job' });
         }
-=======
-class jobController {
-    index(req, res) {
-        const temp = "job";
-        res.send(temp)
->>>>>>> 3690667a0b9b113f38a2a081774f941556a9d74b
     }
 }
-
 module.exports = new jobController();

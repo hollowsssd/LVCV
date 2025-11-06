@@ -11,7 +11,6 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-<<<<<<< HEAD
       // Application thuộc về 1 Job
       Application.belongsTo(models.Job, { foreignKey: 'jobId', as: 'Job' });
 
@@ -20,11 +19,6 @@ module.exports = (sequelize, DataTypes) => {
 
       // Application thuộc về 1 Cv
       Application.belongsTo(models.Cv, { foreignKey: 'cvId', as: 'Cv' });
-=======
-      Application.belongsToMany(models.Application, { foreignKey: 'jobId', as: 'Jobs' })
-      Application.belongsToMany(models.Application, { foreignKey: 'candidateId', as: 'Candidates' })
-      Application.belongsToMany(models.Application, { foreignKey: 'cvId', as: 'Cvs' })
->>>>>>> 3690667a0b9b113f38a2a081774f941556a9d74b
     }
   }
   Application.init({
