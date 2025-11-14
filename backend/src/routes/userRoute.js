@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const auth=require('../middlewares/auth');
 const userController = require('../app/controllers/userController');
 
 
 
 // Danh sách
-router.get('/', userController.index);
+router.get('/',auth, userController.index);
 
 // Chi tiết theo id
 router.get('/:id', userController.show);
