@@ -13,6 +13,7 @@ const employerRouter = require('./src/routes/employerRoute');
 const jobRouter = require('./src/routes/jobRoute');
 const tagRouter = require('./src/routes/tagRoute');
 const userRouter = require('./src/routes/userRoute');
+const auth = require('./src/routes/auth'); 
 
 app.use('/api/applications', applicationRouter);
 app.use('/api/candidates', candidateRouter);
@@ -20,6 +21,6 @@ app.use('/api/employers', employerRouter);
 app.use('/api/jobs', jobRouter);
 app.use('/api/tags', tagRouter);
 app.use('/api/users', userRouter);
-
+app.use('/api/auth', auth);
 console.log("Hello Worlds!");
 module.exports = app;
