@@ -70,7 +70,7 @@ export default function Header() {
             Đăng nhập
           </Link>
           <Link
-            href="/profile_com"
+            href="/createcandicate"
             className="rounded-lg px-3 py-1.5 text-sm bg-black text-white dark:bg-white dark:text-black hover:opacity-90 transition font-semibold"
           >
             Đăng tuyển

@@ -2,138 +2,146 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Mail, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { i } from "framer-motion/client";
 import Image from "next/image";
+import axios from "axios";
+import { useRouter } from "next/navigation";
+
 
 export default function LoginPage() {
-  const [show, setShow] = React.useState(false);
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [showPassword, setShowPassword] = React.useState(false);
   const [remember, setRemember] = React.useState(true);
   const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState("");
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const router = useRouter();
+
+//call api o cho nay
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
+    setError("");
     setLoading(true);
+
     try {
-      // TODO: gọi API thực tế ở đây
-      await new Promise((r) => setTimeout(r, 800));
-      console.log({ email, password, remember });
-      // ví dụ: router.push('/dashboard')
-    } catch (err) {
-      setError("Có lỗi xảy ra, vui lòng thử lại.");
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+      const response = await axios.post(`${API_URL}/api/auth/login`, {
+        email: email.trim(),
+        password,
+      });
+
+      const { token, user } = response.data;
+
+      // Lưu token & user
+      const storage = remember ? localStorage : sessionStorage;
+      storage.setItem("token", token);
+      storage.setItem("user", JSON.stringify(user));
+
+
+      router.push("/profile");
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        const status = error.response.status;
+        const message = error.response.data?.message;
+
+        if (status === 401) {
+          setError("Sai email hoặc mật khẩu");
+        } else if (status === 400) {
+          setError(message || "Dữ liệu không hợp lệ");
+        } else {
+          setError("Lỗi server");
+        }
+      } else {
+        setError("Không thể kết nối đến server");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[100svh] bg-gradient-to-b from-neutral-50 to-white dark:from-black dark:to-neutral-950 text-neutral-900 dark:text-neutral-100 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-black dark:to-gray-900 flex items-center justify-center p-4">
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
-        {/* Logo + Title */}
-        <div className="flex flex-col items-center mb-6">
-          <Link
-            href="/"
-            className="relative h-14 w-40 hover:opacity-90 transition"
-          >
-            <Image
-              src="/logo.png"
-              alt="LVCV Logo"
-              fill
-              priority
-              className="object-contain"
-            />
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <Link href="/" className="relative h-14 w-40">
+            <Image src="/logo.png" alt="Logo" fill className="object-contain" priority />
           </Link>
-
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight">
-            Đăng nhập
-          </h1>
-          <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-            Chào mừng quay lại{" "}
-            <span className="font-medium text-black dark:text-white">LVCV</span>
-          </p>
         </div>
 
-        {/* Card */}
-        <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-black/40 backdrop-blur-sm shadow-sm">
-          <form onSubmit={onSubmit} className="p-6">
+        <h1 className="text-center text-2xl font-bold mb-1">Đăng nhập</h1>
+        <p className="text-center text-sm text-gray-600 dark:text-gray-400 mb-6">
+          Chào mừng quay lại <span className="font-semibold">LVCV</span>
+        </p>
+
+        {/* Form Card */}
+        <div className="bg-white/80 dark:bg-black/50 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
+          <form onSubmit={handleLogin} className="space-y-4">
             {/* Email */}
-            <label className="text-sm font-medium" htmlFor="email">
-              Email
-            </label>
-            <div className="mt-2 flex items-center gap-2 rounded-xl border border-neutral-300 dark:border-neutral-700 px-3 py-2 bg-white dark:bg-neutral-950 focus-within:ring-2 focus-within:ring-neutral-300 dark:focus-within:ring-neutral-700">
-              <Mail size={18} className="shrink-0" />
-              <input
-                id="email"
-                type="email"
-                className="w-full bg-transparent outline-none py-1.5"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
+            <div>
+              <label className="block text-sm font-medium mb-1">Email</label>
+              <div className="flex items-center gap-2 border rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-gray-300 dark:focus-within:ring-gray-700">
+                <Mail size={18} />
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="flex-1 outline-none bg-transparent"
+                  required
+                />
+              </div>
             </div>
 
             {/* Password */}
-            <div className="mt-4">
-              <label className="text-sm font-medium" htmlFor="password">
-                Mật khẩu
-              </label>
-              <div className="mt-2 flex items-center gap-2 rounded-xl border border-neutral-300 dark:border-neutral-700 px-3 py-2 bg-white dark:bg-neutral-950 focus-within:ring-2 focus-within:ring-neutral-300 dark:focus-within:ring-neutral-700">
-                <Lock size={18} className="shrink-0" />
+            <div>
+              <label className="block text-sm font-medium mb-1">Mật khẩu</label>
+              <div className="flex items-center gap-2 border rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-gray-300 dark:focus-within:ring-gray-700">
+                <Lock size={18} />
                 <input
-                  id="password"
-                  type={show ? "text" : "password"}
-                  className="w-full bg-transparent outline-none py-1.5"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="flex-1 outline-none bg-transparent"
                   required
-                  autoComplete="current-password"
                 />
                 <button
                   type="button"
-                  onClick={() => setShow((s) => !s)}
-                  className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                  aria-label={show ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
                 >
-                  {show ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
 
-            {/* Options */}
-            <div className="mt-4 flex items-center justify-between">
-              <label className="flex items-center gap-2 text-sm">
+            {/* Remember + Forgot */}
+            <div className="flex justify-between items-center text-sm">
+              <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  className="size-4 rounded border-neutral-300 dark:border-neutral-700 bg-transparent"
                   checked={remember}
                   onChange={(e) => setRemember(e.target.checked)}
+                  className="rounded"
                 />
-                Ghi nhớ đăng nhập
+                Ghi nhớ
               </label>
-
-              <Link
-                href="/forgot-password"
-                className="text-sm underline underline-offset-4 hover:opacity-80"
-              >
+              <Link href="/forgot-password" className="underline hover:opacity-80">
                 Quên mật khẩu?
               </Link>
             </div>
 
             {/* Error */}
             {error && (
-              <div className="mt-4 rounded-xl border border-red-300/50 text-red-600 dark:text-red-400 bg-red-50/60 dark:bg-red-950/30 px-3 py-2 text-sm">
+              <div className="bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm border border-red-200 dark:border-red-800">
                 {error}
               </div>
             )}
@@ -141,29 +149,20 @@ export default function LoginPage() {
             {/* Submit */}
             <button
               type="submit"
-              className="mt-5 w-full rounded-xl px-4 py-3 text-sm font-medium bg-black text-white dark:bg-white dark:text-black disabled:opacity-60"
               disabled={loading}
+              className="w-full bg-black text-white dark:bg-white dark:text-black py-3 rounded-xl font-medium disabled:opacity-60 transition"
             >
-              {loading ? "Đang đăng nhập…" : "Đăng nhập"}
+              {loading ? "Đang đăng nhập..." : "Đăng nhập"}
             </button>
-
-            {/* Divider */}
-            <div className="mt-5 flex items-center gap-3 text-xs text-neutral-500">
-              <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
-              hoặc
-              <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
-            </div>
-
-            {/* Social (mock) */}
-
-            {/* Sign up link */}
-            <p className="mt-5 text-center text-sm text-neutral-600 dark:text-neutral-400">
-              Chưa có tài khoản?{" "}
-              <Link href="/register" className="underline underline-offset-4">
-                Đăng ký
-              </Link>
-            </p>
           </form>
+
+          {/* Sign up link */}
+          <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+            Chưa có tài khoản?{" "}
+            <Link href="/register" className="underline font-medium">
+              Đăng ký
+            </Link>
+          </div>
         </div>
       </motion.div>
     </div>

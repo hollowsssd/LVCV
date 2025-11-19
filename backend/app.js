@@ -1,6 +1,6 @@
 const express = require('express');
+const cors = require('cors');
 const morgan = require('morgan');
-const cors = require('cors')
 const app = express();
 const corsOption = require('./src/app/config/cors')
 
@@ -8,6 +8,7 @@ app.use(express.json());
 
 // Cors
 app.use(cors(corsOption));
+
 
 app.get('/', (req, res) => { res.send("hello word !") });
 

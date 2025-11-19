@@ -2,12 +2,11 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import {
-  Mail, Lock, UserRound, Eye, EyeOff
-} from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
 
 type Role = 'CANDIDATE' | 'EMPLOYER' | '';
 
@@ -15,7 +14,6 @@ export default function RegisterPage() {
   const router = useRouter();
 
   const [show, setShow] = React.useState(false);
-  const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirm, setConfirm] = React.useState('');
@@ -49,55 +47,43 @@ export default function RegisterPage() {
   React.useEffect(() => {
     if (role) setRoleError(null);
   }, [role]);
-const API = "http://localhost:8080"; // hoặc URL backend của bạn
-
+//call api o
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
 
-    // validate role
     if (!role) {
       setRoleError('Vui lòng chọn loại tài khoản');
       return;
     }
 
-    // Block submit nếu có lỗi
     if (emailError || passwordError || confirmError) return;
 
     setLoading(true);
     try {
-      // Gọi API đăng ký (thay URL bằng backend thực của bạn)
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-          role,
-        }),
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+      await axios.post(`${API_BASE}/api/auth/register`, {
+        email,
+        password,
+        role,
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        const msg = data?.message || 'Đăng ký thất bại, thử lại sau.';
-        setSubmitError(msg);
-        return;
-      }
-
-      // Thành công
-      // Bạn có thể show toast / modal ở đây
-      // Redirect theo role
       if (role === 'CANDIDATE') {
-        router.push('/profile'); // chỉnh nếu route khác
+        router.push('/createcandicate');
       } else if (role === 'EMPLOYER') {
-        router.push('/recruiter/dashboard'); // chỉnh nếu route khác
+        router.push('/recruiter/dashboard');
       } else {
         router.push('/login');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
-      setSubmitError('Có lỗi xảy ra. Vui lòng thử lại.');
+
+      // Kiểm tra axios error một cách an toàn
+      if (axios.isAxiosError(err)) {
+        const serverMsg = err.response?.data?.message;
+        setSubmitError(serverMsg ?? err.message ?? 'Đăng ký thất bại. Vui lòng thử lại.');
+      } else {
+        setSubmitError('Có lỗi xảy ra. Vui lòng thử lại.');
+      }
     } finally {
       setLoading(false);
     }
@@ -105,7 +91,6 @@ const API = "http://localhost:8080"; // hoặc URL backend của bạn
 
   const disabled =
     loading ||
-    !name ||
     !email ||
     !password ||
     !confirm ||
@@ -141,9 +126,6 @@ const API = "http://localhost:8080"; // hoặc URL backend của bạn
           onSubmit={handleSubmit}
           className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-black/40 backdrop-blur-sm shadow-sm p-6"
         >
-          {/* FULL NAME */}
-  
-
           {/* EMAIL */}
           <label className="text-sm font-medium">Email</label>
           <div className="mt-2 mb-1 flex items-center gap-2 rounded-xl border border-neutral-300 dark:border-neutral-700 px-3 py-2 bg-white dark:bg-neutral-950">
