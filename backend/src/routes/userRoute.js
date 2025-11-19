@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const auth=require('../middlewares/auth');
+const auth = require('../app/middlewares/auth');
 const userController = require('../app/controllers/userController');
-
+const authorization = require('../app/middlewares/authorization')
+const ratelimit = require('../app/middlewares/rateLimit')
 
 
 // Danh sách
-router.get('/',auth, userController.index);
+router.get('/', auth, ratelimit, authorization("ADMIN"), userController.index);
 
 // Chi tiết theo id
 router.get('/:id', userController.show);

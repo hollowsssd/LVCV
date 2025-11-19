@@ -2,14 +2,13 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const app = express();
+const corsOption = require('./src/app/config/cors')
 
 app.use(express.json());
-app.use(cors({
-  origin: 'http://localhost:3000',
-  credentials: true,
-}));
 
-// app.use(morgan('combined'));
+// Cors
+app.use(cors(corsOption));
+
 
 app.get('/', (req, res) => { res.send("hello word !") });
 
@@ -19,7 +18,7 @@ const employerRouter = require('./src/routes/employerRoute');
 const jobRouter = require('./src/routes/jobRoute');
 const tagRouter = require('./src/routes/tagRoute');
 const userRouter = require('./src/routes/userRoute');
-const auth = require('./src/routes/auth'); 
+const auth = require('./src/routes/auth');
 
 app.use('/api/applications', applicationRouter);
 app.use('/api/candidates', candidateRouter);
@@ -29,4 +28,5 @@ app.use('/api/tags', tagRouter);
 app.use('/api/users', userRouter);
 app.use('/api/auth', auth);
 console.log("Hello Worlds!");
+
 module.exports = app;
