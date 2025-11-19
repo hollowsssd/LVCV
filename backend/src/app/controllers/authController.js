@@ -10,8 +10,8 @@ function mapRole(r) {
 
   r = r.toLowerCase();
 
-  if (["user", "candidate"].includes(r)) return "CANDIDATE";
-  if (["recruiter", "employer"].includes(r)) return "EMPLOYER";
+  if (["candidate"].includes(r)) return "CANDIDATE";
+  if (["employer"].includes(r)) return "EMPLOYER";
 
   return "CANDIDATE";
 }
