@@ -1,53 +1,118 @@
-const { User, sequelize } = require('../../../models');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+const { User, Candidate, Employer, sequelize } = require("../../../models");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const SALT_ROUNDS = 10;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 function mapRole(r) {
   if (!r) return "CANDIDATE";
-
-  r = r.toLowerCase();
-
-  if (["candidate"].includes(r)) return "CANDIDATE";
-  if (["employer"].includes(r)) return "EMPLOYER";
-
+  const x = String(r).toLowerCase();
+  if (x === "candidate") return "CANDIDATE";
+  if (x === "employer") return "EMPLOYER";
   return "CANDIDATE";
 }
 
-// ================= REGISTER =================
+function pickCandidate(body = {}) {
+  return {
+    fullName: body.fullName ?? null,
+    phone: body.phone ?? null,
+    dob: body.dob ?? null,
+    sex: body.sex ?? null,
+    address: body.address ?? null,
+    summary: body.summary ?? null,
+    avatarUrl: body.avatarUrl ?? null,
+  };
+}
+
+function pickEmployer(body = {}) {
+  return {
+    companyName: body.companyName ?? null,
+    logoUrl: body.logoUrl ?? null,
+    website: body.website ?? null,
+    industry: body.industry ?? null,
+    description: body.description ?? null,
+    location: body.location ?? null,
+  };
+}
+
+function requireFields(obj, fields = []) {
+  const missing = [];
+  for (const f of fields) {
+    if (!obj || obj[f] === undefined || obj[f] === null || String(obj[f]).trim() === "") {
+      missing.push(f);
+    }
+  }
+  return missing;
+}
+
+// đăng kí
 exports.register = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    const { email, password, role } = req.body;
+    const { email, password, role, candidate, employer } = req.body;
 
     if (!email || !password) {
       await t.rollback();
       return res.status(400).json({ message: "Thiếu email hoặc password" });
     }
-
-    if (password.length < 6) {
+    if (String(password).length < 6) {
       await t.rollback();
       return res.status(400).json({ message: "Mật khẩu phải >= 6 ký tự" });
     }
 
+    const normalizedRole = mapRole(role);
+
     // Check email tồn tại
-    const oldUser = await User.findOne({ where: { email } });
+    const oldUser = await User.findOne({ where: { email }, transaction: t });
     if (oldUser) {
       await t.rollback();
       return res.status(409).json({ message: "Email đã được sử dụng" });
     }
 
+    // Validate theo role (fix lỗi tạo dòng NULL)
+    if (normalizedRole === "CANDIDATE") {
+      const missing = requireFields(candidate, ["fullName", "phone", "dob", "address"]);
+      if (missing.length) {
+        await t.rollback();
+        return res.status(400).json({
+          message: `Thiếu thông tin candidate: ${missing.join(", ")}`,
+        });
+      }
+    }
+
+    if (normalizedRole === "EMPLOYER") {
+      const missing = requireFields(employer, ["companyName", "industry", "location"]);
+      if (missing.length) {
+        await t.rollback();
+        return res.status(400).json({
+          message: `Thiếu thông tin employer: ${missing.join(", ")}`,
+        });
+      }
+    }
+
     // Tạo user
     const hashed = await bcrypt.hash(password, SALT_ROUNDS);
+    const user = await User.create(
+      { email, password: hashed, role: normalizedRole },
+      { transaction: t }
+    );
 
-    const user = await User.create({
-      email,
-      password: hashed,
-      role: mapRole(role)
-    }, { transaction: t });
+    // Tạo profile theo role (ELSE IF để chắc chắn chỉ tạo 1 loại)
+    let profile = null;
+
+    if (user.role === "CANDIDATE") {
+      profile = await Candidate.create(
+        { ...pickCandidate(candidate), userId: user.id },
+        { transaction: t }
+      );
+    } else if (user.role === "EMPLOYER") {
+      profile = await Employer.create(
+        { ...pickEmployer(employer), userId: user.id },
+        { transaction: t }
+      );
+    }
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
@@ -60,9 +125,9 @@ exports.register = async (req, res) => {
     return res.status(201).json({
       message: "Đăng ký thành công",
       user: { id: user.id, email: user.email, role: user.role },
-      token
+      profile,
+      token,
     });
-
   } catch (err) {
     await t.rollback();
     console.error(err);
@@ -70,7 +135,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// ================= LOGIN =================
+// đăng nhập
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -94,9 +159,8 @@ exports.login = async (req, res) => {
     return res.json({
       message: "Đăng nhập thành công",
       user: { id: user.id, email: user.email, role: user.role },
-      token
+      token,
     });
-
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Lỗi server" });

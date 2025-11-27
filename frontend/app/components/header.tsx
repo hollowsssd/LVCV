@@ -1,197 +1,158 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useRef } from "react";
+import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
+import Cookies from "js-cookie";
+import { useMemo, useState } from "react";
 
 type User = {
-  name: string;
   email: string;
   role: "candidate" | "employer";
 };
 
 export default function Header() {
-  const [user, setUser] = useState<User | null>(null);
-  const [open, setOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const pathname = usePathname();
+  const router = useRouter();
 
-  // TODO: thay phần này bằng dữ liệu auth thật (JWT / next-auth / context...)
-  useEffect(() => {
-    // Ví dụ: đọc user từ localStorage
-    // const stored = localStorage.getItem("user");
-    // if (stored) setUser(JSON.parse(stored));
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [authTick, setAuthTick] = useState(0); // ✅ thêm cái này
 
-    // DEMO: comment dòng dưới khi đã có auth thật
-    // setUser({ name: "Minh N.", email: "minh@example.com", role: "candidate" });
-  }, []);
+  // đọc cookie -> user
+  const user = useMemo<User | null>(() => {
+    if (typeof window === "undefined") return null;
 
-  // đóng dropdown khi click ra ngoài
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-    if (open) window.addEventListener("click", handler);
-    return () => window.removeEventListener("click", handler);
-  }, [open]);
+    const token = Cookies.get("token");
+    const role = Cookies.get("role") as User["role"] | undefined;
+    const email = Cookies.get("email");
+
+    if (token && role && email) return { email, role };
+    return null;
+  }, [pathname, authTick]); 
 
   const handleLogout = () => {
-    // TODO: clear token / session
-    // localStorage.removeItem("user");
-    setUser(null);
-    setOpen(false);
+    Cookies.remove("token");
+    Cookies.remove("role");
+    Cookies.remove("email");
+      router.push("/");
+  router.refresh();
+
+    setMenuOpen(false);
+
+    // ép header re-render để đọc lại cookie ngay lập tức
+    setAuthTick((t) => t + 1);
+
+    //refresh để các component khác (nếu có) cập nhật theo
+    router.refresh();
+
+    // Nếu đang ở "/" thì push "/" không đổi pathname => nhưng header đã re-render nhờ authTick
+    router.push("/");
   };
 
-  const initials = user
-    ? user.name
-        .split(" ")
-        .map((p) => p[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : "";
+  const menuItems = [
+    { href: "/#features", label: "Tính năng" },
+    { href: "/#how-it-works", label: "Cách hoạt động" },
+    { href: "/#for-whom", label: "Đối tượng sử dụng" },
+  ];
 
   return (
-    <header className="sticky top-0 z-40">
-      {/* vệt gradient mỏng trên đầu cho sang */}
-      <div className="h-[2px] w-full bg-gradient-to-r from-slate-900 via-slate-500 to-slate-900" />
-
-      <div className="max-w-6xl mx-auto px-4 pt-3">
-        <div className="rounded-2xl border border-slate-200/70 bg-white/80 backdrop-blur-xl shadow-[0_18px_45px_rgba(15,23,42,0.12)] flex items-center justify-between px-4 py-2.5 md:px-5">
-          {/* Logo + brand */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-600 text-white flex items-center justify-center text-sm font-semibold shadow-md">
-              AI
-            </div>
-            <div className="flex flex-col">
-              <span className="font-semibold tracking-tight text-slate-900">
-                AI JobMatch
-              </span>
-              
-            </div>
-          </Link>
-
-          {/* Nav giữa (chỉ là anchor, bạn có thể gắn #id sau) */}
-          <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-600">
-            <a href="#features" className="hover:text-slate-900">
-              Tính năng
-            </a>
-            <a href="#how-it-works" className="hover:text-slate-900">
-              Cách hoạt động
-            </a>
-            <a href="#for-whom" className="hover:text-slate-900">
-              Đối tượng sử dụng
-            </a>
-          </nav>
-
-          {/* Khu vực user / login */}
-          <div className="flex items-center gap-3">
-            {/* Chưa đăng nhập */}
-            {!user && (
-              <>
-                <Link
-                  href="/auth/login"
-                  className="hidden sm:inline-flex items-center justify-center px-3 py-1.5 rounded-full border border-slate-200 text-xs font-medium text-slate-700 hover:border-slate-900 hover:text-slate-900"
-                >
-                  Đăng nhập
-                </Link>
-                <Link
-                  href="/auth/register"
-                  className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-full bg-slate-900 text-white text-xs md:text-sm font-medium shadow-md hover:bg-slate-800"
-                >
-                  Bắt đầu ngay
-                </Link>
-              </>
-            )}
-
-            {/* Đã đăng nhập */}
-            {user && (
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => setOpen((o) => !o)}
-                  className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-2.5 py-1.5 hover:border-slate-900 transition-colors"
-                >
-                  <div className="h-8 w-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-semibold">
-                    {initials}
-                  </div>
-                  <div className="hidden sm:flex flex-col items-start">
-                    <span className="text-[11px] font-medium text-slate-900 max-w-[120px] truncate">
-                      {user.name}
-                    </span>
-                    <span className="text-[10px] text-slate-500 capitalize">
-                      {user.role}
-                    </span>
-                  </div>
-                  <svg
-                    className={`h-3 w-3 text-slate-500 transition-transform ${
-                      open ? "rotate-180" : ""
-                    }`}
-                    viewBox="0 0 20 20"
-                    fill="none"
-                  >
-                    <path
-                      d="M5 7.5L10 12.5L15 7.5"
-                      stroke="currentColor"
-                      strokeWidth="1.4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
-
-                {open && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden text-sm">
-                    <div className="px-4 py-3 bg-slate-50/80 border-b border-slate-100">
-                      <p className="text-[11px] text-slate-500">
-                        Đăng nhập với
-                      </p>
-                      <p className="text-sm font-semibold text-slate-900 truncate">
-                        {user.name}
-                      </p>
-                      <p className="text-[11px] text-slate-500 truncate">
-                        {user.email}
-                      </p>
-                    </div>
-
-                    <div className="py-1">
-                      <Link
-                        href={
-                          user.role === "candidate"
-                            ? "/candidate/dashboard"
-                            : "/employer/dashboard"
-                        }
-                        className="block px-4 py-2 hover:bg-slate-50 text-slate-700"
-                        onClick={() => setOpen(false)}
-                      >
-                        Dashboard
-                      </Link>
-                      <Link
-                        href="/profile"
-                        className="block px-4 py-2 hover:bg-slate-50 text-slate-700"
-                        onClick={() => setOpen(false)}
-                      >
-                        Hồ sơ của tôi
-                      </Link>
-                    </div>
-
-                    <div className="border-t border-slate-100">
-                      <button
-                        type="button"
-                        onClick={handleLogout}
-                        className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50 text-sm"
-                      >
-                        Đăng xuất
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-sm">
+      <div className="mx-auto max-w-6xl px-4 flex h-14 items-center justify-between">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2">
+          <div className="relative h-9 w-9 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <Image
+              src="/logo.png" // đổi theo tên file ảnh trong /public
+              alt="Logo"
+              fill
+              className="object-cover"
+              priority
+            />
           </div>
+          <div className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold text-slate-900">AI JobMatch</span>
+            <span className="text-[11px] text-slate-500">Chấm điểm CV - Tìm việc phù hợp</span>
+          </div>
+        </Link>
+
+        {/* Nav */}
+        <nav className="hidden md:flex items-center gap-6 text-xs text-slate-600">
+          {menuItems.map((item) => (
+            <a key={item.href} href={item.href} className="hover:text-slate-900">
+              {item.label}
+            </a>
+          ))}
+        </nav>
+
+        {/* Right */}
+        <div className="flex items-center gap-2">
+          {!user ? (
+            <>
+              <Link
+                href="/auth/login"
+                className="text-xs font-medium text-slate-700 hover:text-slate-900"
+              >
+                Đăng nhập
+              </Link>
+              <Link
+                href="/auth/register"
+                className="rounded-full bg-slate-900 text-white text-xs font-medium px-3 py-1.5 hover:bg-slate-800"
+              >
+                Bắt đầu ngay
+              </Link>
+            </>
+          ) : (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((p) => !p)}
+                className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs hover:border-slate-900"
+              >
+                <div className="h-6 w-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[11px]">
+                  {user.email[0].toUpperCase()}
+                </div>
+                <div className="hidden sm:flex flex-col text-left">
+                  <span className="text-xs font-medium text-slate-900">{user.email}</span>
+                  <span className="text-[10px] text-slate-500 uppercase">{user.role}</span>
+                </div>
+              </button>
+
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-44 rounded-2xl border border-slate-200 bg-white shadow-md text-xs">
+                  <div className="px-3 py-2 border-b border-slate-100">
+                    <p className="font-medium text-slate-900">Tài khoản</p>
+                    <p className="text-[11px] text-slate-500 truncate">{user.email}</p>
+                  </div>
+                  <div className="py-1">
+                    {user.role === "candidate" ? (
+                      <Link
+                        href="/candidate/dashboard"
+                        className="block px-3 py-1.5 hover:bg-slate-50"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        Candidate Dashboard
+                      </Link>
+                    ) : (
+                      <Link
+                        href="/employer/dashboard"
+                        className="block px-3 py-1.5 hover:bg-slate-50"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        Employer Dashboard
+                      </Link>
+                    )}
+
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-red-600"
+                    >
+                      Đăng xuất
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </header>

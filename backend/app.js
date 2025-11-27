@@ -7,7 +7,7 @@ const corsOption = require('./src/app/config/cors')
 app.use(express.json());
 
 // Cors
-app.use(cors(corsOption));
+//app.use(cors(corsOption));
 
 
 app.get('/', (req, res) => { res.send("hello word !") });

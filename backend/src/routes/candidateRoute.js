@@ -1,24 +1,14 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const candidateController = require('../app/controllers/candidateController');
+const candidateController = require("../app/controllers/candidateController");
+const auth = require("../app/middlewares/auth");
+const authorization = require("../app/middlewares/authorization");
 
 
-
-// Danh sách
-router.get('/', candidateController.index);
-
-// Chi tiết theo id
-router.get('/:id', candidateController.show);
-
-// Thêm mới
-router.post('/', candidateController.create);
-
-// Cập nhật
-router.put('/:id', candidateController.update);
-
-// Xóa
-router.delete('/:id', candidateController.delete);
-
-
+router.get("/", auth, authorization("CANDIDATE"), candidateController.index);
+router.get("/:id", auth, authorization("CANDIDATE"), candidateController.show);
+router.post("/", auth, authorization("CANDIDATE"), candidateController.create);
+router.put("/:id", auth, authorization("CANDIDATE"), candidateController.update);
+router.delete("/:id", auth, authorization("CANDIDATE"), candidateController.delete);
 
 module.exports = router;
