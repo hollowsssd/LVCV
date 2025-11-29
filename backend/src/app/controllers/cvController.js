@@ -1,4 +1,3 @@
-// src/app/controllers/cvController.js
 const path = require("path");
 const fs = require("fs");
 const { Cv } = require("../../../models");
