@@ -24,6 +24,8 @@ module.exports = (sequelize, DataTypes) => {
     fileUrl: DataTypes.STRING,
     fileType: DataTypes.STRING,
     isDefault: DataTypes.BOOLEAN,
+    score: DataTypes.INTEGER,
+    feedback: DataTypes.TEXT,
     candidateId: DataTypes.INTEGER
   }, {
     sequelize,

@@ -21,6 +21,14 @@ module.exports = {
       isDefault: {
         type: Sequelize.BOOLEAN
       },
+      score: {
+        type: Sequelize.INTEGER,
+        allowNull: true
+      },
+      feedback: {
+        type: Sequelize.TEXT,
+        allowNull: true
+      },
       candidateId: {
         type: Sequelize.INTEGER,
         references: {
