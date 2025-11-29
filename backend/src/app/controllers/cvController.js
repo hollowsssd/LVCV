@@ -1,4 +1,3 @@
-// src/app/controllers/cvController.js
 const path = require("path");
 const fs = require("fs");
 const { Cv } = require("../../../models");
@@ -44,7 +43,7 @@ function buildPayload(body, file) {
 
   if (file) {
     payload.fileUrl = `/uploads/cvs/${file.filename}`;
-    payload.fileType = path.extname(file.originalname).slice(1).toLowerCase(); // ✅ pdf/doc/docx
+    payload.fileType = path.extname(file.originalname).slice(1).toLowerCase(); // pdf/doc/docx
   }
 
   return payload;
