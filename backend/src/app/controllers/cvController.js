@@ -2,6 +2,7 @@
 const path = require("path");
 const fs = require("fs");
 const { Cv } = require("../../../models");
+const cvWorker = require("../services/cvWorker");
 
 const UPLOADS_BASE = path.join(process.cwd(), "uploads");
 
@@ -44,7 +45,7 @@ function buildPayload(body, file) {
 
   if (file) {
     payload.fileUrl = `/uploads/cvs/${file.filename}`;
-    payload.fileType = path.extname(file.originalname).slice(1).toLowerCase(); // ✅ pdf/doc/docx
+    payload.fileType = path.extname(file.originalname).slice(1).toLowerCase(); // pdf/doc/docx
   }
 
   return payload;
@@ -123,6 +124,20 @@ class cvController {
       return res.status(500).json({ error: "Lỗi xóa cv" });
     }
   }
-}
+    async rateCV(req, res) {
+        try {
+            if (!req.file) return res.status(400).json({ message: "Thiếu file CV" });
+
+            const result = await cvWorker.runJob({
+                mime: req.file.mimetype,
+                buffer: req.file.buffer,
+                job_title: req.body.job_title,
+            });
+
+            return res.json(result);
+        } catch (e) {
+            return res.status(500).json({ message: "Chấm CV lỗi", detail: e.message });
+        }
+    }
 
 module.exports = new cvController();

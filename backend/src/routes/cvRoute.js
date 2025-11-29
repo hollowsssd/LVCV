@@ -9,8 +9,10 @@ const fs = require("fs");
 
 const uploadDir = path.join(process.cwd(), "uploads", "cvs");
 fs.mkdirSync(uploadDir, { recursive: true });
-
 const allowedExt = new Set([".pdf", ".doc", ".docx"]);
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+
 
 const storage = multer.diskStorage({
   destination: (_, __, cb) => cb(null, uploadDir),
@@ -99,6 +101,7 @@ const handleUpload = (required) => (req, res, next) => {
 };
 
 // ===== Routes =====
+router.post("/rate-cv", upload.single("cvfile"), cvController.rateCV);
 router.get("/", cvController.index);
 router.get("/:id", cvController.show);
 
