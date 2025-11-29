@@ -6,7 +6,7 @@ const cvWorker = require("../services/cvWorker");
 
 const UPLOADS_BASE = path.join(process.cwd(), "uploads");
 
-const safeUnlink = (p) => p && fs.unlink(p, () => {});
+const safeUnlink = (p) => p && fs.unlink(p, () => { });
 
 function removeLocalFileByUrl(fileUrl) {
   if (!fileUrl) return;
@@ -14,7 +14,7 @@ function removeLocalFileByUrl(fileUrl) {
   let pathname = fileUrl;
   try {
     pathname = new URL(fileUrl).pathname;
-  } catch (_) {}
+  } catch (_) { }
 
   // /uploads/cvs/xxx.pdf -> cvs/xxx.pdf
   const relative = pathname.replace(/^\/uploads\/?/, "");
@@ -124,20 +124,21 @@ class cvController {
       return res.status(500).json({ error: "Lỗi xóa cv" });
     }
   }
-    async rateCV(req, res) {
-        try {
-            if (!req.file) return res.status(400).json({ message: "Thiếu file CV" });
+  async rateCV(req, res) {
+    try {
+      if (!req.file) return res.status(400).json({ message: "Thiếu file CV" });
 
-            const result = await cvWorker.runJob({
-                mime: req.file.mimetype,
-                buffer: req.file.buffer,
-                job_title: req.body.job_title,
-            });
+      const result = await cvWorker.runJob({
+        mime: req.file.mimetype,
+        buffer: req.file.buffer,
+        job_title: req.body.job_title,
+      });
 
-            return res.json(result);
-        } catch (e) {
-            return res.status(500).json({ message: "Chấm CV lỗi", detail: e.message });
-        }
+      return res.json(result);
+    } catch (e) {
+      return res.status(500).json({ message: "Chấm CV lỗi", detail: e.message });
     }
+  }
+}
 
 module.exports = new cvController();
