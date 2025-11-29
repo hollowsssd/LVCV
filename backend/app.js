@@ -27,6 +27,7 @@ const userRouter = require('./src/routes/userRoute');
 const auth = require('./src/routes/auth');
 const Cv = require('./src/routes/cvRoute');
 
+
 app.use('/api/applications', applicationRouter);
 app.use('/api/candidates', candidateRouter);
 app.use("/api/cvs", cvRouter);
@@ -36,6 +37,7 @@ app.use('/api/tags', tagRouter);
 app.use('/api/users', userRouter);
 app.use('/api/auth', auth);
 app.use('/api/cv', Cv);
+
 console.log("Hello Worlds!");
 
 module.exports = app;

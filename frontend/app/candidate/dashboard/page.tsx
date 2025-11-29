@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Toast from "@/app/components/Toast";
+
 type Job = {
   id: number;
   title: string;
@@ -24,32 +25,40 @@ const mockCv = {
 };
 
 const mockJobs: Job[] = [
-  {
-    id: 1,
-    title: "Backend Intern",
-    company: "ABC Software",
-    location: "HCMC",
-    match: 0.91,
-  },
-  {
-    id: 2,
-    title: "Node.js Developer (Junior)",
-    company: "XYZ Tech",
-    location: "Remote",
-    match: 0.84,
-  },
-  {
-    id: 3,
-    title: "Fullstack Intern (React/Node)",
-    company: "Cool Startup",
-    location: "HCMC",
-    match: 0.79,
-  },
+  { id: 1, title: "Backend Intern", company: "ABC Software", location: "HCMC", match: 0.91 },
+  { id: 2, title: "Node.js Developer (Junior)", company: "XYZ Tech", location: "Remote", match: 0.84 },
+  { id: 3, title: "Fullstack Intern (React/Node)", company: "Cool Startup", location: "HCMC", match: 0.79 },
 ];
 
 export default function CandidateDashboard() {
   const [toast, setToast] = useState<ToastState>(null);
   const [loadingJobId, setLoadingJobId] = useState<number | null>(null);
+
+  // ✅ tránh eslint any + tránh timer bị chồng
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (next: ToastState, autoCloseMs = 2000) => {
+    setToast(next);
+
+    // clear timer cũ nếu có
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+
+    // auto close
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null);
+      toastTimerRef.current = null;
+    }, autoCloseMs);
+  };
+
+  // cleanup khi unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
 
   const handleApply = async (job: Job) => {
     try {
@@ -59,10 +68,9 @@ export default function CandidateDashboard() {
       const cvId = mockCv.id;
 
       // TODO: gọi API apply thật
-      // const res = await fetch("/api/candidate/apply", {
+      // const res = await fetch("http://localhost:8080/api/applications", {
       //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   credentials: "include",
+      //   headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       //   body: JSON.stringify({ jobId: job.id, cvId }),
       // });
       // if (!res.ok) throw new Error("Apply thất bại");
@@ -70,16 +78,15 @@ export default function CandidateDashboard() {
       // DEMO: giả lập call API
       await new Promise((r) => setTimeout(r, 600));
 
-      setToast({
+      showToast({
         type: "success",
-        message: `Đã nộp CV cho công việc "${job.title}" thành công.`,
-      });
-    } catch (err) {
-      setToast({
+        message: `Đã nộp CV cho "${job.title}" thành công.`,
+      }, 1000);
+    } catch {
+      showToast({
         type: "error",
-        message:
-          "Không thể nộp CV lúc này. Vui lòng thử lại hoặc kiểm tra kết nối.",
-      });
+        message: "Không thể nộp CV lúc này. Vui lòng thử lại.",
+      }, 1000);
     } finally {
       setLoadingJobId(null);
     }
@@ -87,13 +94,7 @@ export default function CandidateDashboard() {
 
   return (
     <>
-      {toast && (
-        <Toast
-          type={toast.type}
-          message={toast.message}
-          onClose={() => setToast(null)}
-        />
-      )}
+      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
       <div className="space-y-8">
         {/* Header */}
@@ -169,8 +170,7 @@ export default function CandidateDashboard() {
 
             {mockJobs.length === 0 ? (
               <p className="text-xs text-slate-500">
-                Hiện chưa có job nào phù hợp. Hãy thử cập nhật CV hoặc quay lại
-                sau.
+                Hiện chưa có job nào phù hợp. Hãy thử cập nhật CV hoặc quay lại sau.
               </p>
             ) : (
               <div className="space-y-3">
@@ -192,6 +192,7 @@ export default function CandidateDashboard() {
                       <span className="inline-flex rounded-full bg-slate-900 text-white text-[11px] px-2.5 py-0.5">
                         Match {(job.match * 100).toFixed(0)}%
                       </span>
+
                       <button
                         type="button"
                         onClick={() => handleApply(job)}
@@ -207,9 +208,7 @@ export default function CandidateDashboard() {
             )}
 
             <p className="mt-2 text-[11px] text-slate-500">
-              Khi bạn bấm <span className="font-medium">Apply ngay</span>, hệ
-              thống sẽ lưu lại đơn ứng tuyển (job + CV + thời gian) để nhà
-              tuyển dụng xem trong trang Job Detail.
+              Khi bạn bấm <span className="font-medium">Apply ngay</span>, hệ thống sẽ lưu lại đơn ứng tuyển (job + CV + thời gian) để nhà tuyển dụng xem trong trang Job Detail.
             </p>
           </section>
         </div>

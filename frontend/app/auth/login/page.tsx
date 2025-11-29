@@ -51,7 +51,6 @@ export default function LoginPage() {
   const [toast, setToast] = useState<ToastState>(null);
   const [loading, setLoading] = useState(false);
 
-  // auto close toast 1 giây
   useEffect(() => {
     if (!toast) return;
     const t = window.setTimeout(() => setToast(null), 1000);
@@ -80,7 +79,6 @@ export default function LoginPage() {
 
     try {
       setLoading(true);
-
       const res = await axios.post<ApiLoginResponse>(`${API_BASE_URL}/login`, {
         email: email.trim(),
         password,
