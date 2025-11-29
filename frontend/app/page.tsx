@@ -68,7 +68,6 @@ export default function HomePage() {
           "Duyệt/từ chối/hẹn phỏng vấn ngay trong hệ thống.",
         ];
 
-  // ✅ Hero 2: CTA KHÔNG trùng “Bắt đầu” nữa — đổi theo role (Upload CV / Tạo job)
   const roleForAction: Role = authedRole ?? selectedRole;
 
   const secondaryCta =
@@ -409,7 +408,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* HOW IT WORKS (✅ id đúng) */}
+      {/* HOW IT WORKS ( id đúng) */}
       <section id="how-it-works" className="space-y-6">
         <div className="space-y-1">
           <h2 className="text-lg font-semibold text-slate-900">Cách hoạt động</h2>
