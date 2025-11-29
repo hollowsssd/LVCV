@@ -16,22 +16,21 @@ class CvWorker {
     this.maxQueue = 50;
     this.timeoutMs = 120_000;
 
-    this.restartDelayMs = 500; // nhỏ thôi để tránh vòng lặp restart quá nhanh
+    this.restartDelayMs = 500; // để tránh vòng lặp restart quá nhanh
     this.start();
   }
 
   _getScriptPath() {
-    // Ưu tiên env nếu muốn custom tuyệt đối:
     // CV_WORKER_SCRIPT=D:\CV\backend\src\app\python\rateCv.py
     if (process.env.CV_WORKER_SCRIPT) return process.env.CV_WORKER_SCRIPT;
 
-    // Theo cấu trúc bạn đang để: src/app/services/cvWorker.js -> src/app/python/rateCv.py
+    // path python
     return path.join(__dirname, "..", "python", "rateCv.py");
   }
 
   start() {
     const script = this._getScriptPath();
-    const pythonExe = process.env.PYTHON_PATH || "python"; // hoặc "python3"
+    const pythonExe = process.env.PYTHON_PATH || "python"; 
 
     console.log("[cvWorker] starting...");
     console.log("[cvWorker] python =", pythonExe);
