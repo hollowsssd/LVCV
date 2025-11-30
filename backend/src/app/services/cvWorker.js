@@ -30,7 +30,7 @@ class CvWorker {
 
   start() {
     const script = this._getScriptPath();
-    const pythonExe = process.env.PYTHON_PATH || "python"; 
+    const pythonExe = process.env.PYTHON_PATH || "python";
 
     console.log("[cvWorker] starting...");
     console.log("[cvWorker] python =", pythonExe);

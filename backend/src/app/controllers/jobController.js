@@ -1,4 +1,6 @@
 const { Job } = require("../../../models");
+const { Op } = require("sequelize");
+
 
 class jobController {
     async index(req, res) {
@@ -72,6 +74,52 @@ class jobController {
             res.json({ message: "Xóa thành công" });
         } catch (error) {
             res.status(500).json({ error: "Lỗi xóa job", detail: error.message });
+        }
+    }
+    async search(req, res) {
+        try {
+            
+            // bỏ khoảng trắng đầu/cuối
+            const recommendJob = (req.query.recommendJob || "").trim();
+
+            // Không có keyword thì trả mảng rỗng luôn (tránh query DB vô ích)
+            if (!recommendJob) return res.json([]);
+
+            // filter(Boolean): bỏ key rỗng
+            // slice(0, 12): giới hạn tối đa 12 token
+            const key = recommendJob.split(/\s+/).filter(Boolean).slice(0, 12);
+
+            // Tạo danh sách điều kiện 
+            // Với mỗi token t, tạo 2 điều kiện:
+            //  - title LIKE %t%
+            //  - description LIKE %t%
+            // flatMap để "flatten" thành 1 mảng điều kiện OR lớn
+            const orConds = key.flatMap((t) => ([
+                { title: { [Op.like]: `%${t}%` } },
+                { description: { [Op.like]: `%${t}%` } },
+            ]));
+
+            // Query DB:
+            // - Chỉ lấy job đang OPEN
+            // - Và (title/description chứa bất kỳ token nào)
+            const jobs = await Job.findAll({
+                where: {
+                    status: "OPEN", // chỉnh theo status thực tế của mày (OPEN/ACTIVE...)
+                    [Op.or]: orConds,
+                    // Optional: chỉ lấy job còn hạn
+                    // deadline: { [Op.gte]: new Date() },
+                },
+                limit: 30,
+            });
+
+            // Trả danh sách jobs
+            return res.json(jobs);
+        } catch (e) {
+            // Nếu DB/Sequelize lỗi => trả 500
+            return res.status(500).json({
+                message: "Search job lỗi",
+                detail: e.message,
+            });
         }
     }
 }

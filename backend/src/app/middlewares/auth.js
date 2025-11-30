@@ -8,7 +8,7 @@ module.exports = (req, res, next) => {
 
     const parts = authHeader.split(' ');
     if (parts.length !== 2 || parts[0] !== 'Bearer') {
-      return res.status(401).json({ message: 'Sai định dạng Authorization' });
+      return res.status(401).json({ message: 'Sai định dạng ' });
     }
     const token = parts[1];
     const payload = jwt.verify(token, process.env.JWT_SECRET);
