@@ -4,12 +4,12 @@ const { Employer } = require("../../../models");
 module.exports = async (req, res, next) => {
     try {
         // NOTE: auth.js phải chạy trước middleware này để set req.user từ JWT payload
-        if (!req.user) return res.status(401).json({ message: "Chưa đăng nhập" });
+        // if (!req.user) return res.status(401).json({ message: "Chưa đăng nhập" });
 
-        // NOTE: Chặn user không phải EMPLOYER (candidate không được tạo/sửa/xoá job)
-        if (req.user.role !== "EMPLOYER") {
-            return res.status(403).json({ message: "Chỉ EMPLOYER mới được dùng API này" });
-        }
+        // // NOTE: Chặn user không phải EMPLOYER (candidate không được tạo/sửa/xoá job)
+        // if (req.user.role !== "EMPLOYER") {
+        //     return res.status(403).json({ message: "Chỉ EMPLOYER mới được dùng API này" });
+        // }
 
         // NOTE: Mapping đúng quan hệ trong DB:
         // users.id (trong token) -> employers.userId -> employers.id
