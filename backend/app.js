@@ -8,7 +8,7 @@ const path = require("path");
 app.use(express.json());
 
 // Cors
-app.use(cors(corsOption));
+// app.use(cors(corsOption));
 
 app.use(express.urlencoded({ extended: true }));
 
@@ -22,7 +22,6 @@ const candidateRouter = require('./src/routes/candidateRoute');
 const cvRouter = require('./src/routes/cvRoute');
 const employerRouter = require('./src/routes/employerRoute');
 const jobRouter = require('./src/routes/jobRoute');
-const tagRouter = require('./src/routes/tagRoute');
 const userRouter = require('./src/routes/userRoute');
 const auth = require('./src/routes/auth');
 const Cv = require('./src/routes/cvRoute');
@@ -33,7 +32,6 @@ app.use('/api/candidates', candidateRouter);
 app.use("/api/cvs", cvRouter);
 app.use('/api/employers', employerRouter);
 app.use('/api/jobs', jobRouter);
-app.use('/api/tags', tagRouter);
 app.use('/api/users', userRouter);
 app.use('/api/auth', auth);
 app.use('/api/cv', Cv);

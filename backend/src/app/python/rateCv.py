@@ -14,7 +14,9 @@ except Exception:
 load_dotenv()
 API_KEY = os.getenv("GEMINI_KEY")
 if not API_KEY:
-    print(json.dumps({"id": None, "ok": False, "error": "Missing GEMINI_KEY"}), flush=True)
+    print(
+        json.dumps({"id": None, "ok": False, "error": "Missing GEMINI_KEY"}), flush=True
+    )
     sys.exit(1)
 
 client = genai.Client(api_key=API_KEY)
@@ -36,8 +38,9 @@ CV_SCHEMA = {
     "properties": {
         "job_title": {"type": "string"},
         "muc_do_phu_hop": {"type": "integer"},
-        "diem_tong": {"type": "integer"},       
+        "diem_tong": {"type": "integer"},
         "nhan_xet_tong_quan": {"type": "string"},
+        "recommend_query": {"type": "string"}, 
         "diem_chi_tiet": {
             "type": "object",
             "properties": {
@@ -47,7 +50,13 @@ CV_SCHEMA = {
                 "ky_nang": {"type": "integer"},
                 "thanh_tuu": {"type": "integer"},
             },
-            "required": ["trinh_bay", "noi_dung", "kinh_nghiem", "ky_nang", "thanh_tuu"],
+            "required": [
+                "trinh_bay",
+                "noi_dung",
+                "kinh_nghiem",
+                "ky_nang",
+                "thanh_tuu",
+            ],
         },
         "uu_diem": {"type": "array", "items": {"type": "string"}},
         "can_cai_thien": {"type": "array", "items": {"type": "string"}},
@@ -58,12 +67,14 @@ CV_SCHEMA = {
         "muc_do_phu_hop",
         "diem_tong",
         "nhan_xet_tong_quan",
+        "recommend_query", 
         "diem_chi_tiet",
         "uu_diem",
         "can_cai_thien",
         "goi_y_chi_tiet",
     ],
 }
+
 
 def evaluate(file_bytes: bytes, mime: str, job_title: str):
     prompt = f"""
@@ -76,6 +87,10 @@ Yêu cầu:
 - "diem_tong": 1-100 (chất lượng CV tổng thể).
 - Thiếu số liệu định lượng / mô tả chung chung / không có dự án liên quan -> trừ điểm và nêu rõ.
 - Checklist hành động: liệt kê các bước chỉnh sửa CV theo đúng vị trí.
+- Tạo "recommend_query" là 1 chuỗi ngắn để tìm việc trong DB bằng cách search title/description.
+- Format recommend_query: 6-12 keyword, ưu tiên English/Vietnamese job keywords.
+- Ví dụ: "junior php developer laravel mysql rest api"
+- Không dùng ký tự đặc biệt rườm rà, không xuống dòng.
 """
     resp = client.models.generate_content(
         model="gemini-2.5-flash",
@@ -90,6 +105,7 @@ Yêu cầu:
         },
     )
     return json.loads(resp.text)
+
 
 # Protocol stdin: mỗi dòng là JSON: { id, mime, job_title, data_b64 }
 for line in sys.stdin:
