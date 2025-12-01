@@ -145,11 +145,9 @@ export default function Header() {
 
     try {
       if (!n.isRead) {
-        await axios.patch(
-          `${API_BASE}/api/notifications/${n.id}/read`,
-          null,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        await axios.patch(`${API_BASE}/api/notifications/${n.id}/read`, null, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         setUnreadCount((c) => Math.max(0, c - 1));
         setNotis((prev) => prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
@@ -161,6 +159,8 @@ export default function Header() {
     setNotiOpen(false);
     if (n.link) router.push(n.link);
   };
+
+  const isCandidate = user?.role === "candidate";
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-sm">
@@ -183,6 +183,23 @@ export default function Header() {
               {item.label}
             </a>
           ))}
+
+          {/*  Candidate-only: Danh sách việc làm */}
+          {isCandidate && (
+            <Link
+              href="/candidate/job"
+              className={[
+                "hover:text-slate-900",
+                pathname?.startsWith("/job") ? "text-slate-900 font-semibold" : "",
+              ].join(" ")}
+              onClick={() => {
+                setMenuOpen(false);
+                setNotiOpen(false);
+              }}
+            >
+              Danh sách việc làm
+            </Link>
+          )}
         </nav>
 
         {/* Right */}
@@ -192,7 +209,10 @@ export default function Header() {
               <Link href="/auth/login" className="text-xs font-medium text-slate-700 hover:text-slate-900">
                 Đăng nhập
               </Link>
-              <Link href="/auth/register" className="rounded-full bg-slate-900 text-white text-xs font-medium px-3 py-1.5 hover:bg-slate-800">
+              <Link
+                href="/auth/register"
+                className="rounded-full bg-slate-900 text-white text-xs font-medium px-3 py-1.5 hover:bg-slate-800"
+              >
                 Bắt đầu ngay
               </Link>
             </>
@@ -292,7 +312,7 @@ export default function Header() {
                           className="block px-3 py-2 hover:bg-slate-50"
                           onClick={() => setMenuOpen(false)}
                         >
-                          Candidate Dashboard
+                          Hồ sơ người dùng
                         </Link>
                       ) : (
                         <Link
@@ -300,7 +320,7 @@ export default function Header() {
                           className="block px-3 py-2 hover:bg-slate-50"
                           onClick={() => setMenuOpen(false)}
                         >
-                          Employer Dashboard
+                          Hồ sơ nhà tuyển dụng
                         </Link>
                       )}
 

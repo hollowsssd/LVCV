@@ -34,7 +34,7 @@ export default function CandidateDashboard() {
   const [toast, setToast] = useState<ToastState>(null);
   const [loadingJobId, setLoadingJobId] = useState<number | null>(null);
 
-  // ✅ tránh eslint any + tránh timer bị chồng
+  // tránh eslint any + tránh timer bị chồng
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = (next: ToastState, autoCloseMs = 2000) => {

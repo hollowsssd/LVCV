@@ -1,18 +1,13 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState, useEffect } from "react";
 import axios, { AxiosError } from "axios";
 import Cookies from "js-cookie";
 import Toast from "@/app/components/Toast";
+import { useRouter } from "next/navigation";
 
-type ToastState = {
-  type: "success" | "error";
-  message: string;
-} | null;
-
-type ApiErrorResponse = {
-  message?: string;
-};
+type ToastState = { type: "success" | "error"; message: string } | null;
+type ApiErrorResponse = { message?: string };
 
 type CreateJobPayload = {
   title: string;
@@ -24,27 +19,26 @@ type CreateJobPayload = {
   jobType: string;
   experienceRequired: string;
   deadline: string; // YYYY-MM-DD
-  status: string;
+  status: "OPEN" | "CLOSED" | "DRAFT";
 };
 
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
 
 function toNumberSafe(v: string) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
-
-// chỉ giữ số 0-9
 function digitsOnly(value: string) {
   return value.replace(/[^\d]/g, "");
 }
-
-// chặn các phím có thể tạo ký tự không mong muốn cho số: -, +, e, E, ., ,
 function blockBadNumberKeys(e: React.KeyboardEvent<HTMLInputElement>) {
   if (["-", "+", "e", "E", ".", ","].includes(e.key)) e.preventDefault();
 }
 
 export default function CreateJobPage() {
+  const router = useRouter();
+
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
   const [jobType, setJobType] = useState("Onsite");
@@ -60,7 +54,7 @@ export default function CreateJobPage() {
     return d.toISOString().slice(0, 10);
   });
 
-  const [status, setStatus] = useState<string>("OPEN");
+  const [status, setStatus] = useState<CreateJobPayload["status"]>("OPEN");
   const [description, setDescription] = useState("");
 
   const [toast, setToast] = useState<ToastState>(null);
@@ -68,45 +62,47 @@ export default function CreateJobPage() {
 
   const token = useMemo(() => Cookies.get("token") || "", []);
 
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = (t: ToastState, ms = 1400) => {
+    setToast(t);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), ms);
+  };
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     if (!title.trim() || !location.trim() || !description.trim()) {
-      setToast({
-        type: "error",
-        message: "Vui lòng nhập đầy đủ: Title, Location và Description.",
-      });
+      showToast({ type: "error", message: "Vui lòng nhập đầy đủ: Title, Location và Description." }, 2000);
       return;
     }
 
-    // salary
     const min = toNumberSafe(salaryMin);
     const max = toNumberSafe(salaryMax);
 
     if (!isNegotiable) {
       if (min < 0 || max < 0) {
-        setToast({ type: "error", message: "Salary không hợp lệ." });
+        showToast({ type: "error", message: "Salary không hợp lệ." }, 2000);
         return;
       }
       if (max > 0 && min > max) {
-        setToast({
-          type: "error",
-          message: "SalaryMin không được lớn hơn SalaryMax.",
-        });
+        showToast({ type: "error", message: "SalaryMin không được lớn hơn SalaryMax." }, 2200);
         return;
       }
     }
 
     if (!deadline) {
-      setToast({ type: "error", message: "Vui lòng chọn Deadline." });
+      showToast({ type: "error", message: "Vui lòng chọn Deadline." }, 2000);
       return;
     }
 
     if (!token) {
-      setToast({
-        type: "error",
-        message: "Bạn chưa đăng nhập. Vui lòng đăng nhập Employer để tạo job.",
-      });
+      showToast({ type: "error", message: "Bạn chưa đăng nhập Employer." }, 2200);
       return;
     }
 
@@ -127,42 +123,28 @@ export default function CreateJobPage() {
       setLoading(true);
 
       await axios.post(`${API_BASE_URL}/api/jobs`, payload, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          // NOTE: Origin KHÔNG cần set thủ công, browser tự set.
-          // Để đây cũng không sao, nhưng không bắt buộc.
-          Origin: "http://localhost:3000",
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       });
 
-      setToast({
-        type: "success",
-        message:
-          "Tạo job thành công! Job này sẽ dùng cho AI matching (embedding + % match).",
-      });
+      showToast({ type: "success", message: "Tạo job thành công! Đang quay về dashboard..." }, 900);
 
-      // reset
-      setTitle("");
-      setLocation("");
-      setJobType("Onsite");
-      setExperienceRequired("0-1 year");
-      setSalaryMin("0");
-      setSalaryMax("0");
-      setIsNegotiable(true);
-      setDescription("");
-      setStatus("OPEN");
-
-      const d = new Date();
-      d.setDate(d.getDate() + 30);
-      setDeadline(d.toISOString().slice(0, 10));
+      setTimeout(() => {
+        router.push("/employer/dashboard?created=1");
+        router.refresh();
+      }, 650);
     } catch (error) {
       const err = error as AxiosError<ApiErrorResponse>;
-      setToast({
-        type: "error",
-        message:
-          err.response?.data?.message ?? "Không thể tạo job. Vui lòng thử lại.",
+      console.error("CREATE JOB FAIL:", {
+        url: `${API_BASE_URL}/api/jobs`,
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
       });
+
+      showToast(
+        { type: "error", message: err.response?.data?.message ?? "Không thể tạo job. Vui lòng thử lại." },
+        2400
+      );
     } finally {
       setLoading(false);
     }
@@ -170,25 +152,15 @@ export default function CreateJobPage() {
 
   return (
     <>
-      {toast && (
-        <Toast
-          type={toast.type}
-          message={toast.message}
-          onClose={() => setToast(null)}
-        />
-      )}
+      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-xl md:text-2xl font-semibold text-slate-900">
-            Tạo job mới
-          </h1>
-
+          <h1 className="text-xl md:text-2xl font-semibold text-slate-900">Tạo job mới</h1>
         </div>
 
         <section className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm">
           <form className="space-y-5" onSubmit={handleSubmit}>
-            {/* Title */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-slate-700">
                 Tiêu đề <span className="text-red-500">*</span>
@@ -201,7 +173,6 @@ export default function CreateJobPage() {
               />
             </div>
 
-            {/* Location + JobType */}
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-sm font-medium text-slate-700">
@@ -216,9 +187,7 @@ export default function CreateJobPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">
-                  Vị trí ứng tuyển
-                </label>
+                <label className="text-sm font-medium text-slate-700">Vị trí ứng tuyển</label>
                 <select
                   value={jobType}
                   onChange={(e) => setJobType(e.target.value)}
@@ -234,12 +203,9 @@ export default function CreateJobPage() {
               </div>
             </div>
 
-            {/* Experience + Status */}
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">
-                  Số năm kinh nghiệm
-                </label>
+                <label className="text-sm font-medium text-slate-700">Số năm kinh nghiệm</label>
                 <select
                   value={experienceRequired}
                   onChange={(e) => setExperienceRequired(e.target.value)}
@@ -253,12 +219,10 @@ export default function CreateJobPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">
-                  Trạng thái
-                </label>
+                <label className="text-sm font-medium text-slate-700">Trạng thái</label>
                 <select
                   value={status}
-                  onChange={(e) => setStatus(e.target.value)}
+                  onChange={(e) => setStatus(e.target.value as CreateJobPayload["status"])}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-900 focus:bg-white"
                 >
                   <option value="OPEN">OPEN</option>
@@ -268,7 +232,6 @@ export default function CreateJobPage() {
               </div>
             </div>
 
-            {/* Deadline */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-slate-700">
                 Thời hạn nộp <span className="text-red-500">*</span>
@@ -281,14 +244,9 @@ export default function CreateJobPage() {
               />
             </div>
 
-            {/* Salary + Negotiable */}
             <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-slate-900">
-                    Mức lương
-                  </p>
-                </div>
+                <p className="text-sm font-medium text-slate-900">Mức lương</p>
 
                 <label className="inline-flex items-center gap-2 text-sm text-slate-700">
                   <input
@@ -302,11 +260,8 @@ export default function CreateJobPage() {
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
-                {/* Salary Min */}
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">
-                    Tối thiểu
-                  </label>
+                  <label className="text-sm font-medium text-slate-700">Tối thiểu</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -317,19 +272,15 @@ export default function CreateJobPage() {
                     onChange={(e) => setSalaryMin(digitsOnly(e.target.value))}
                     onPaste={(e) => {
                       e.preventDefault();
-                      const text = e.clipboardData.getData("text");
-                      setSalaryMin(digitsOnly(text));
+                      setSalaryMin(digitsOnly(e.clipboardData.getData("text")));
                     }}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900 disabled:bg-slate-100"
                     placeholder="0"
                   />
                 </div>
 
-                {/* Salary Max */}
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">
-                    Tối đa{" "}
-                  </label>
+                  <label className="text-sm font-medium text-slate-700">Tối đa</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -340,8 +291,7 @@ export default function CreateJobPage() {
                     onChange={(e) => setSalaryMax(digitsOnly(e.target.value))}
                     onPaste={(e) => {
                       e.preventDefault();
-                      const text = e.clipboardData.getData("text");
-                      setSalaryMax(digitsOnly(text));
+                      setSalaryMax(digitsOnly(e.clipboardData.getData("text")));
                     }}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900 disabled:bg-slate-100"
                     placeholder="0"
@@ -350,7 +300,6 @@ export default function CreateJobPage() {
               </div>
             </div>
 
-            {/* Description */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-slate-700">
                 Mô tả <span className="text-red-500">*</span>
@@ -362,13 +311,11 @@ export default function CreateJobPage() {
                 placeholder="Mô tả chi tiết công việc, yêu cầu kỹ năng, nhiệm vụ..."
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-900 focus:bg-white resize-none"
               />
-              
             </div>
 
             <div className="flex items-center justify-between pt-2">
               <p className="text-[11px] text-slate-400">
-                Các trường có dấu <span className="text-red-500">*</span> là bắt
-                buộc.
+                Các trường có dấu <span className="text-red-500">*</span> là bắt buộc.
               </p>
               <button
                 type="submit"

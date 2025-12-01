@@ -33,7 +33,8 @@ module.exports = (sequelize, DataTypes) => {
     experienceRequired: DataTypes.STRING,
     deadline: DataTypes.DATEONLY,
     status: DataTypes.STRING,
-    employerId: DataTypes.INTEGER
+    employerId: DataTypes.INTEGER,
+    companyName: DataTypes.STRING,//moi them cai nay nha
   }, {
     sequelize,
     modelName: 'Job',
