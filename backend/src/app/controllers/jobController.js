@@ -21,11 +21,19 @@ class jobController {
             res.status(500).json({ error: "Lỗi lấy job" });
         }
     }
+    async showJobEmployer(req, res) {
+        try {
+            const job = await Job.findByPk(req.employer.id);
+            if (!job) return res.status(404).json({ message: "Không tìm thấy job dựa trên Employer" });
+            res.json(job);
+        } catch (error) {
+            res.status(500).json({ error: "Lỗi lấy job" });
+        }
+    }
 
     async create(req, res) {
         try {
             const { employerId, ...safeBody } = req.body;
-
             // them check companyName o employer
             if (!req.employer?.companyName) {
                 return res.status(400).json({ message: "Employer chưa có companyName" });

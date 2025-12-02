@@ -25,11 +25,6 @@ class employerController {
   // POST /api/employers 
   async create(req, res) {
     try {
-      if (!req.user) return res.status(401).json({ message: "Chưa đăng nhập" });
-      if (req.user.role !== "EMPLOYER" && req.user.role !== "employer") {
-        return res.status(403).json({ message: "Chỉ EMPLOYER mới được tạo hồ sơ employer" });
-      }
-
       // bắt buộc companyName
       const companyName = String(req.body.companyName ?? "").trim();
       if (!companyName) {

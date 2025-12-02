@@ -12,7 +12,7 @@ module.exports = (req, res, next) => {
     }
     const token = parts[1];
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = payload; 
+    req.user = payload;
     next();
   } catch (err) {
     console.error('auth middleware err:', err.message);
