@@ -23,7 +23,7 @@ class jobController {
     }
     async showJobEmployer(req, res) {
         try {
-            const job = await Job.findByPk(req.employer.id);
+            const job = await Job.findAll({ where: { employerId: req.employer.id }});
             if (!job) return res.status(404).json({ message: "Không tìm thấy job dựa trên Employer" });
             res.json(job);
         } catch (error) {
