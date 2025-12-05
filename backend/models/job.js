@@ -19,7 +19,7 @@ module.exports = (sequelize, DataTypes) => {
 
     }
   }
-  Job.init({
+  Job.init({ //Mới xóa company name do nó có ở bên bảng employer rồi
     title: DataTypes.STRING,
     description: DataTypes.STRING,
     salaryMin: DataTypes.DOUBLE,
@@ -31,7 +31,6 @@ module.exports = (sequelize, DataTypes) => {
     deadline: DataTypes.DATEONLY,
     status: DataTypes.STRING,
     employerId: DataTypes.INTEGER,
-    companyName: DataTypes.STRING,//moi them cai nay nha
   }, {
     sequelize,
     modelName: 'Job',

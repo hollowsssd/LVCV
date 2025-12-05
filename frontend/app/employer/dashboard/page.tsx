@@ -10,7 +10,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 type ToastState = { type: "success" | "error"; message: string } | null;
 type ApiErrorResponse = { message?: string };
 
-type JobStatus = "OPEN" | "CLOSED" | "DRAFT";
+type JobStatus = "OPEN" | "CLOSED";
 
 type JobListItem = {
   id: number;
@@ -20,18 +20,24 @@ type JobListItem = {
   candidates?: number;
 };
 
+type EmployerJobsResponse = {
+  employerId: number;
+  companyName: string;
+  jobs: JobListItem[];
+};
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
 
 function StatusPill({ status }: { status: JobStatus }) {
-  const map: Record<JobStatus, string> = { OPEN: "Đang mở", CLOSED: "Đã đóng", DRAFT: "Nháp" };
+  const map: Record<JobStatus, string> = { OPEN: "Đang mở", CLOSED: "Đã đóng" };
 
   const cls =
     status === "OPEN"
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
       : status === "CLOSED"
-      ? "border-rose-200 bg-rose-50 text-rose-700"
-      : "border-slate-200 bg-slate-50 text-slate-700";
+        ? "border-rose-200 bg-rose-50 text-rose-700"
+        : "border-slate-200 bg-slate-50 text-slate-700";
 
   return (
     <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] ${cls}`}>
@@ -53,6 +59,7 @@ export default function EmployerDashboard() {
   const [toast, setToast] = useState<ToastState>(null);
   const [jobs, setJobs] = useState<JobListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [companyName, setCompanyName] = useState<string>("");
 
   const token = useMemo(() => Cookies.get("token") || "", []);
 
@@ -73,16 +80,21 @@ export default function EmployerDashboard() {
     try {
       setLoading(true);
 
-      const res = await axios.get<JobListItem[]>(`${API_BASE_URL}/api/jobs`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        withCredentials: false,
-      });
+      const res = await axios.get<EmployerJobsResponse>(
+        `${API_BASE_URL}/api/jobs/showJobEmployer`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          withCredentials: false,
+        }
+      );
 
-      setJobs(Array.isArray(res.data) ? res.data : []);
+      setCompanyName(res.data?.companyName || "");
+      setJobs(Array.isArray(res.data?.jobs) ? res.data.jobs : []);
+
     } catch (error) {
       const err = error as AxiosError<ApiErrorResponse>;
       console.error("FETCH JOBS FAIL:", {
-        url: `${API_BASE_URL}/api/jobs`,
+        url: `${API_BASE_URL}/api/jobs/showJobEmployer`,
         status: err.response?.status,
         data: err.response?.data,
         message: err.message,
@@ -131,6 +143,15 @@ export default function EmployerDashboard() {
         </div>
 
         <section className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] text-slate-500">Doanh nghiệp</p>
+              <p className="text-[20px] text-sm font-semibold text-slate-900">{companyName}</p>
+            </div>
+            {/* optional: nút sửa */}
+            {/* <button className="text-xs font-medium text-slate-700 hover:text-slate-900">Chỉnh sửa</button> */}
+          </div>
+
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-semibold text-slate-900">Job đã đăng</h2>
             <span className="text-[11px] text-slate-500">{jobs.length} job</span>
