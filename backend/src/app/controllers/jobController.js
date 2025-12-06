@@ -23,26 +23,25 @@ class jobController {
     }
     async showJobEmployer(req, res) {
         try {
-            const job = await Job.findAll({ where: { employerId: req.employer.id }});
-            if (!job) return res.status(404).json({ message: "Không tìm thấy job dựa trên Employer" });
-            res.json(job);
+            const jobs = await Job.findAll({ where: { employerId: req.employer.id } });
+
+            return res.json({
+                employerId: req.employer.id,
+                companyName: req.employer.companyName,
+                jobs,
+            });
         } catch (error) {
-            res.status(500).json({ error: "Lỗi lấy job" });
+            return res.status(500).json({ error: "Lỗi lấy job", detail: error.message });
         }
     }
 
     async create(req, res) {
         try {
             const { employerId, ...safeBody } = req.body;
-            // them check companyName o employer
-            if (!req.employer?.companyName) {
-                return res.status(400).json({ message: "Employer chưa có companyName" });
-            }
 
             const job = await Job.create({
                 ...safeBody,
                 employerId: req.employer.id,
-                companyName: req.employer.companyName,
             });
 
             res.status(201).json(job);

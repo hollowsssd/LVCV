@@ -171,7 +171,7 @@ export default function Header() {
             <Image src="/logo.png" alt="Logo" fill className="object-cover" priority />
           </div>
           <div className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold text-slate-900">AI JobMatch</span>
+            <span className="text-sm font-semibold text-slate-900">LVCV - AI JobMatch</span>
             <span className="text-[11px] text-slate-500">Chấm điểm CV - Tìm việc phù hợp</span>
           </div>
         </Link>
