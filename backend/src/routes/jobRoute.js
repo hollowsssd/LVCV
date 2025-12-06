@@ -19,7 +19,7 @@ router.get("/:id", jobController.show);
 router.post("/", auth, authorization("EMPLOYER"), requireEmployer, jobController.create);
 
 // Cập nhật
-router.put("/:id", auth,authorization("EMPLOYER"), requireEmployer, jobController.update);
+router.put("/:id", auth, authorization("EMPLOYER"), requireEmployer, jobController.update);
 
 // Xóa
 router.delete("/:id", auth, authorization("EMPLOYER"), requireEmployer, jobController.delete);

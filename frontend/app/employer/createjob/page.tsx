@@ -19,7 +19,7 @@ type CreateJobPayload = {
   jobType: string;
   experienceRequired: string;
   deadline: string; // YYYY-MM-DD
-  status: "OPEN" | "CLOSED" | "DRAFT";
+  status: "OPEN" | "CLOSED";
 };
 
 const API_BASE_URL =
@@ -227,7 +227,6 @@ export default function CreateJobPage() {
                 >
                   <option value="OPEN">OPEN</option>
                   <option value="CLOSED">CLOSED</option>
-                  <option value="DRAFT">DRAFT</option>
                 </select>
               </div>
             </div>

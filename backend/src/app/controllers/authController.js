@@ -113,19 +113,12 @@ exports.register = async (req, res) => {
       );
     }
 
-    // const token = jwt.sign(
-    //   { id: user.id, email: user.email, role: user.role },
-    //   JWT_SECRET,
-    //   { expiresIn: "7d" }
-    // );
-
     await t.commit();
 
     return res.status(201).json({
       message: "Đăng ký thành công",
       user: { id: user.id, email: user.email, role: user.role },
       profile,
-      // token,
     });
   } catch (err) {
     await t.rollback();

@@ -16,7 +16,7 @@ module.exports = async (req, res, next) => {
         // Và jobs.employerId phải nhận giá trị employers.id
         const employer = await Employer.findOne({
             where: { userId: req.user.id }, // req.user.id = users.id
-            attributes: ["id","companyName"], // them company de lay dc truong            // NOTE: employers table chỉ có cột "id" (KHÔNG có "employerId")
+            attributes: ["id", "companyName"], // NOTE: employers table chỉ có cột "id" (KHÔNG có "employerId")
         });
 
         // NOTE: Nếu user role EMPLOYER nhưng chưa tạo hồ sơ employer => không cho thao tác job
