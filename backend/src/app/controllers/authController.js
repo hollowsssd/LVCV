@@ -49,7 +49,6 @@ function requireFields(obj, fields = []) {
 // đăng kí
 exports.register = async (req, res) => {
   const t = await sequelize.transaction();
-
   try {
     const { email, password, role, candidate, employer } = req.body;
 
@@ -114,11 +113,11 @@ exports.register = async (req, res) => {
       );
     }
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    // const token = jwt.sign(
+    //   { id: user.id, email: user.email, role: user.role },
+    //   JWT_SECRET,
+    //   { expiresIn: "7d" }
+    // );
 
     await t.commit();
 
@@ -126,7 +125,7 @@ exports.register = async (req, res) => {
       message: "Đăng ký thành công",
       user: { id: user.id, email: user.email, role: user.role },
       profile,
-      token,
+      // token,
     });
   } catch (err) {
     await t.rollback();
