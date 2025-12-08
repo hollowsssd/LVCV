@@ -6,9 +6,9 @@ const corsOption = require("./src/app/config/cors");
 
 const port = 8080;
 const server = http.createServer(app);
-const io = new Server(server, {
-    cors: corsOption,
-});
+// const io = new Server(server, {
+//     cors: corsOption,
+// });
 
 server.listen(port);
-module.exports = { io };
+// module.exports = { io };

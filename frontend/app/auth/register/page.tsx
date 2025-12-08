@@ -14,7 +14,7 @@ type ApiErrorResponse = { message?: string; error?: string };
 
 type AuthRegisterResponse = {
   message?: string;
-  user: { id: number; email: string; role: string }; // role backend: "CANDIDATE" | "EMPLOYER"
+  user: { id: number; email: string; role: string }; // backend có thể trả "CANDIDATE" | "EMPLOYER"
   profile: unknown;
   token: string;
 };
@@ -45,7 +45,7 @@ function isEmail(v: string) {
 }
 
 function normalizeRole(r: string): Role | "" {
-  const x = (r || "").toLowerCase();
+  const x = String(r || "").toLowerCase(); // ✅ "CANDIDATE" -> "candidate"
   if (x === "candidate") return "candidate";
   if (x === "employer") return "employer";
   return "";
@@ -144,7 +144,7 @@ export default function RegisterPage() {
       if (!fullName.trim() || !phone.trim() || !dob || !address.trim()) {
         setToast({
           type: "error",
-          message: "Candidate: vui lòng nhập Full name, Phone, DOB và Address.",
+          message: "Ứng viên: vui lòng nhập Full name, Phone, DOB và Address.",
         });
         return;
       }
@@ -152,7 +152,7 @@ export default function RegisterPage() {
       if (!companyName.trim() || !industry.trim() || !employerLocation.trim()) {
         setToast({
           type: "error",
-          message: "Employer: vui lòng nhập Company name, Industry và Location.",
+          message: "Nhà tuyển dụng: vui lòng nhập Company name, Industry và Location.",
         });
         return;
       }
@@ -197,20 +197,29 @@ export default function RegisterPage() {
 
       const { token, user } = regRes.data;
 
+      const normalizedRole = normalizeRole(user.role);
+      if (!normalizedRole) {
+        setToast({ type: "error", message: `Role trả về không hợp lệ: ${user.role}` });
+        return;
+      }
+
       const cookieOptions: Cookies.CookieAttributes = {
         expires: 7,
         path: "/",
         sameSite: "lax",
       };
 
+      Cookies.remove("token", { path: "/" });
+      Cookies.remove("role", { path: "/" });
+      Cookies.remove("email", { path: "/" });
+
       Cookies.set("token", token, cookieOptions);
-      Cookies.set("role", user.role, cookieOptions);
+      Cookies.set("role", normalizedRole, cookieOptions);
       Cookies.set("email", user.email, cookieOptions);
 
-      // show success then redirect after ~1s
-      setToast({ type: "success", message: "Đăng ký thành công! " });
+      setToast({ type: "success", message: "Đăng ký thành công!" });
 
-      const nextPath = user.role === "CANDIDATE" ? "/candidate/dashboard" : "/employer/dashboard";
+      const nextPath = normalizedRole === "candidate" ? "/candidate/dashboard" : "/employer/dashboard";
       window.setTimeout(() => {
         router.push(nextPath);
         router.refresh();
@@ -265,7 +274,7 @@ export default function RegisterPage() {
                     roleLocked && role !== "candidate" ? "opacity-50 cursor-not-allowed" : "",
                   ].join(" ")}
                 >
-                  <div className="text-sm font-semibold">🎓 Người tuyển dụng</div>
+                  <div className="text-sm font-semibold">🎓 Ứng viên</div>
                   <div className={`text-xs mt-1 ${role === "candidate" ? "text-slate-200" : "text-slate-500"}`}>
                     Upload CV, xem score & job match.
                   </div>
@@ -383,7 +392,7 @@ export default function RegisterPage() {
                 {role === "candidate" ? (
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-slate-900">Thông tin người tuyển dụng</p>
+                      <p className="text-sm font-semibold text-slate-900">Thông tin ứng viên</p>
                     </div>
 
                     <div className="grid sm:grid-cols-2 gap-4">
@@ -502,6 +511,27 @@ export default function RegisterPage() {
                           placeholder="Hồ Chí Minh / Hà Nội"
                         />
                       </div>
+
+                      <div className="space-y-1 sm:col-span-2">
+                        <label className="text-sm font-medium text-slate-700">Logo URL</label>
+                        <input
+                          value={logoUrl}
+                          onChange={(e) => setLogoUrl(e.target.value)}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
+                          placeholder="https://..."
+                        />
+                      </div>
+
+                      <div className="space-y-1 sm:col-span-2">
+                        <label className="text-sm font-medium text-slate-700">Website</label>
+                        <input
+                          value={website}
+                          onChange={(e) => setWebsite(e.target.value)}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
+                          placeholder="https://..."
+                        />
+                      </div>
+
                       <div className="space-y-1 sm:col-span-2">
                         <label className="text-sm font-medium text-slate-700">Mô tả</label>
                         <textarea
