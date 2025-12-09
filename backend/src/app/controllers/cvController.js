@@ -3,7 +3,10 @@ const fs = require("fs");
 const { Cv } = require("../../../models");
 const cvWorker = require("../services/cvWorker");
 
-const UPLOADS_BASE = path.join(process.cwd(), "uploads");
+// __dirname đang ở: backend/src/app/controllers
+// đi lên 4 cấp sẽ ra project root (ngang backend/frontend)
+const PROJECT_ROOT = path.resolve(__dirname, "../../../../");
+const UPLOADS_BASE = path.join(PROJECT_ROOT, "uploads");
 
 const safeUnlink = (p) => p && fs.unlink(p, () => { });
 

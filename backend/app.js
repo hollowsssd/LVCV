@@ -12,8 +12,11 @@ app.use(cors(corsOption));
 
 app.use(express.urlencoded({ extended: true }));
 
-// serve uploads (để link /uploads/... mở được)
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+// serve uploads
+const PROJECT_ROOT = path.resolve(__dirname, ".."); // vì server.js nằm trong backend
+const UPLOADS_DIR = path.join(PROJECT_ROOT, "uploads");
+
+app.use("/uploads", express.static(UPLOADS_DIR));
 
 app.get('/', (req, res) => { res.send("hello word !") });
 

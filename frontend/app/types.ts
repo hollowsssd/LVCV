@@ -1,4 +1,4 @@
-export type JobStatus = "OPEN" | "CLOSED" | "DRAFT";
+export type JobStatus = "OPEN" | "CLOSED";
 
 export type Job = {
   id: number;

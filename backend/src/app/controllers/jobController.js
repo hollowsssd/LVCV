@@ -23,7 +23,10 @@ class jobController {
     }
     async showJobEmployer(req, res) {
         try {
-            const jobs = await Job.findAll({ where: { employerId: req.employer.id } });
+            const jobs = await Job.findAll({
+                where: { employerId: req.employer.id },
+                order: [["createdAt", "DESC"]], // mới nhất lên đầu
+            });
 
             return res.json({
                 employerId: req.employer.id,
