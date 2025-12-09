@@ -74,7 +74,6 @@ function normalizeFixes(text: string) {
 }
 
 export default function CvDraftDetailPage() {
-  // ✅ đọc sessionStorage ngay từ init -> không cần useEffect -> hết warning
   const [draft] = useState<DraftData | null>(() => readDraftFromSession());
 
   const report: CvEvaluateReport | null = draft?.report ?? null;
@@ -180,7 +179,7 @@ export default function CvDraftDetailPage() {
         >
           ← Về Dashboard
         </Link>
-        <p className="text-[11px] text-slate-500">Lưu CV ở Dashboard để dùng apply job.</p>
+        <p className="text-[11px] text-slate-500">Lưu CV ở để dùng apply job.</p>
       </div>
     </div>
   );

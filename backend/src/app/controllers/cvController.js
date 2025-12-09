@@ -74,7 +74,21 @@ class cvController {
       return res.status(500).json({ error: "Lỗi lấy cv" });
     }
   }
+  async myList(req, res) {
+    try {
+      const cvs = await Cv.findAll({
+        where: { candidateId: req.candidate.id },
+        attributes: { exclude: ["score","feedback"] }, //de khong select vao sc va feed
+        order: [["createdAt", "DESC"]],
+      });
 
+      return res.json(cvs);
+    } catch (e) {
+      return res
+        .status(500)
+        .json({ message: "Lỗi lấy CV của bạn", detail: e.message });
+    }
+  }
   async create(req, res) {
     try {
       if (!req.file) {

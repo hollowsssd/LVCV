@@ -4,8 +4,11 @@ const candidateController = require("../app/controllers/candidateController");
 const auth = require("../app/middlewares/auth");
 const authorization = require("../app/middlewares/authorization");
 
+router.get("/me", auth, authorization("CANDIDATE"), candidateController.me);
+
 
 router.get("/", auth, authorization("CANDIDATE"), candidateController.index);
+
 
 router.get("/:id", auth, authorization("CANDIDATE"), candidateController.show);
 

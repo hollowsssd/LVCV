@@ -5,10 +5,20 @@ import Cookies from "js-cookie";
 import axios, { AxiosError } from "axios";
 import Toast from "@/app/components/Toast";
 
+
 type ToastState = { type: "success" | "error"; message: string } | null;
-type ApiErrorResponse = { message?: string };
+
+type ApiErrorResponse = {
+  message?: string;
+  error?: string;
+  detail?: string;
+};
 
 type JobStatus = "OPEN" | "CLOSED" | "DRAFT";
+
+type EmployerLite = {
+  companyName?: string | null;
+};
 
 type Job = {
   id: number;
@@ -22,11 +32,15 @@ type Job = {
   location: string | null;
   jobType: string | null;
   experienceRequired: string | null;
-  deadline: string | null; // YYYY-MM-DD
+  deadline: string | null;
   status: JobStatus;
 
   employerId: number;
-  companyName: string | null;
+
+  // BE có thể trả theo nhiều kiểu:
+  companyName?: string | null;
+  Employer?: EmployerLite | null;
+  employer?: EmployerLite | null;
 
   createdAt: string;
   updatedAt: string;
@@ -38,9 +52,11 @@ type Cv = {
   isDefault: boolean;
 };
 
+
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
   "http://localhost:8080";
+
 
 function fmtDate(iso?: string | null) {
   if (!iso) return "—";
@@ -62,6 +78,21 @@ function formatSalary(job: Job) {
   return `Đến ${formatMoney(max)}`;
 }
 
+function pickCompanyName(job: Job): string | null {
+  return job.companyName ?? job.Employer?.companyName ?? job.employer?.companyName ?? null;
+}
+
+function pickErr(err: unknown, fallback: string): string {
+  const e = err as AxiosError<ApiErrorResponse>;
+  return (
+    e.response?.data?.message ||
+    e.response?.data?.error ||
+    e.response?.data?.detail ||
+    e.message ||
+    fallback
+  );
+}
+
 function StatusPill({ status }: { status: JobStatus }) {
   const cls =
     status === "OPEN"
@@ -70,13 +101,10 @@ function StatusPill({ status }: { status: JobStatus }) {
       ? "border-rose-200 bg-rose-50 text-rose-700"
       : "border-slate-200 bg-slate-50 text-slate-700";
 
-  const label =
-    status === "OPEN" ? "Đang mở" : status === "CLOSED" ? "Đã đóng" : "Nháp";
+  const label = status === "OPEN" ? "Đang mở" : status === "CLOSED" ? "Đã đóng" : "Nháp";
 
   return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] ${cls}`}
-    >
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] ${cls}`}>
       {label}
     </span>
   );
@@ -90,6 +118,7 @@ function MetaCard({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
 
 function JobDetailModal({
   open,
@@ -135,19 +164,15 @@ function JobDetailModal({
 
       <div className="absolute left-1/2 top-1/2 w-[94vw] max-w-4xl -translate-x-1/2 -translate-y-1/2">
         <div className="rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
-          {/* header */}
           <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
             <div className="space-y-1">
               <p className="text-xs text-slate-500">{job.companyName || "—"}</p>
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-base font-semibold text-slate-900">
-                  {job.title}
-                </h3>
+                <h3 className="text-base font-semibold text-slate-900">{job.title}</h3>
                 <StatusPill status={job.status} />
               </div>
               <p className="text-[11px] text-slate-500">
-                {job.location || "—"} · {job.jobType || "—"} · Hạn:{" "}
-                {job.deadline || "—"}
+                {job.location || "—"} · {job.jobType || "—"} · Hạn: {job.deadline || "—"}
               </p>
             </div>
 
@@ -160,12 +185,9 @@ function JobDetailModal({
             </button>
           </div>
 
-          {/* body */}
           <div className="p-5 space-y-5">
             <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-              <p className="text-xs font-semibold text-slate-900 mb-3">
-                Thông tin job
-              </p>
+              <p className="text-xs font-semibold text-slate-900 mb-3">Thông tin job</p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
                 {meta.map((m) => (
                   <MetaCard key={m.label} label={m.label} value={m.value} />
@@ -222,15 +244,17 @@ function ApplyCvModal({
     const fetchCvs = async () => {
       try {
         setLoading(true);
-        const res = await axios.get<Cv[]>(`${API_BASE}/api/cvs`, {
+        const res = await axios.get<Cv[]>(`${API_BASE}/api/cvs/mine`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
         const arr = Array.isArray(res.data) ? res.data : [];
         setCvs(arr);
 
         const def = arr.find((x) => x.isDefault);
         setCvId(def?.id ?? arr[0]?.id ?? null);
-      } catch {
+      } catch (err) {
+        console.error("[ApplyCvModal] fetch cvs error:", err);
         setCvs([]);
         setCvId(null);
       } finally {
@@ -259,10 +283,7 @@ function ApplyCvModal({
       onApplied();
       onClose();
     } catch (err) {
-      const e = err as AxiosError<ApiErrorResponse>;
-      toastError(
-        e.response?.data?.message ?? "Apply thất bại. Vui lòng thử lại."
-      );
+      toastError(pickErr(err, "Apply thất bại. Vui lòng thử lại."));
     } finally {
       setSubmitting(false);
     }
@@ -307,9 +328,7 @@ function ApplyCvModal({
               </div>
             ) : (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  Chọn CV
-                </label>
+                <label className="text-sm font-medium text-slate-700">Chọn CV</label>
                 <select
                   value={cvId ?? ""}
                   onChange={(e) => setCvId(Number(e.target.value))}
@@ -317,8 +336,7 @@ function ApplyCvModal({
                 >
                   {cvs.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.title ? c.title : `CV #${c.id}`}{" "}
-                      {c.isDefault ? "(Default)" : ""}
+                      {c.title ? c.title : `CV #${c.id}`} {c.isDefault ? "(Default)" : ""}
                     </option>
                   ))}
                 </select>
@@ -349,10 +367,12 @@ function ApplyCvModal({
   );
 }
 
+/* ===================== Page ===================== */
+
 export default function JobsPage() {
   const [toast, setToast] = useState<ToastState>(null);
-
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const showToast = (t: ToastState, ms = 1400) => {
     setToast(t);
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -383,14 +403,26 @@ export default function JobsPage() {
   const fetchJobs = async () => {
     try {
       setLoading(true);
+
+      // NOTE: BE của m hiện tại index() đang Job.findAll() không filter theo status query.
+      // Nhưng FE cứ giữ query status=OPEN cũng được (BE ignore cũng ok).
       const url = onlyOpen ? `${API_BASE}/api/jobs?status=OPEN` : `${API_BASE}/api/jobs`;
+
       const res = await axios.get<Job[]>(url);
-      setJobs(Array.isArray(res.data) ? res.data : []);
+      const arr = Array.isArray(res.data) ? res.data : [];
+
+      // normalize companyName về top-level để UI dùng 1 chỗ
+      const normalized: Job[] = arr.map((j) => ({
+        ...j,
+        companyName: pickCompanyName(j),
+      }));
+
+      setJobs(normalized);
     } catch (err) {
       const e = err as AxiosError<ApiErrorResponse>;
       showToast(
-        { type: "error", message: e.response?.data?.message ?? "Không thể tải danh sách việc làm." },
-        1800
+        { type: "error", message: pickErr(err, "Không thể tải danh sách việc làm.") },
+        2000
       );
       setJobs([]);
     } finally {
@@ -400,6 +432,7 @@ export default function JobsPage() {
 
   useEffect(() => {
     fetchJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onlyOpen]);
 
   const filtered = useMemo(() => {
@@ -416,9 +449,7 @@ export default function JobsPage() {
     return (
       <div className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm">
         <p className="text-sm font-semibold text-slate-900">Không có quyền truy cập</p>
-        <p className="mt-1 text-sm text-slate-600">
-          Trang “Danh sách việc làm” chỉ dành cho tài khoản Candidate.
-        </p>
+        <p className="mt-1 text-sm text-slate-600">Trang “Danh sách việc làm” chỉ dành cho tài khoản Candidate.</p>
       </div>
     );
   }
@@ -481,7 +512,7 @@ export default function JobsPage() {
               placeholder="Tìm theo title / công ty / địa điểm..."
               className="w-full sm:w-72 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-900 focus:bg-white"
             />
-            
+           
           </div>
         </div>
 
@@ -509,25 +540,20 @@ export default function JobsPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-900 truncate">{job.title}</p>
+
                       <p className="text-[11px] text-slate-500 truncate">
                         {job.companyName || "—"} · {job.location || "—"} · {job.jobType || "—"}
                       </p>
 
                       <p className="mt-1 text-[11px] text-slate-500">
                         Kinh nghiệm:{" "}
-                        <span className="text-slate-700 font-medium">
-                          {job.experienceRequired || "—"}
-                        </span>{" "}
-                        · Hạn:{" "}
-                        <span className="text-slate-700 font-medium">
-                          {job.deadline || "—"}
-                        </span>
+                        <span className="text-slate-700 font-medium">{job.experienceRequired || "—"}</span> · Hạn:{" "}
+                        <span className="text-slate-700 font-medium">{job.deadline || "—"}</span>
                       </p>
 
                       <p className="mt-1 text-[11px] text-slate-500">
-                        Lương:{" "}
-                        <span className="text-slate-700 font-medium">{formatSalary(job)}</span>{" "}
-                        · Tạo ngày {fmtDate(job.createdAt)}
+                        Lương: <span className="text-slate-700 font-medium">{formatSalary(job)}</span> · Tạo ngày{" "}
+                        {fmtDate(job.createdAt)}
                       </p>
                     </div>
 

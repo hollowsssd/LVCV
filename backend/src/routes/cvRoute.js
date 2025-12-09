@@ -114,6 +114,8 @@ const handleUpload = (required) => (req, res, next) => {
 // ===== Routes =====
 router.post("/rate-cv",auth,requireCandidate, uploadRateCv.single("cvfile"), cvController.rateCV);
 router.get("/", cvController.index);
+router.get("/mine", auth, requireCandidate, cvController.myList);
+
 router.get("/:id", cvController.show);
 
 router.post("/",auth,requireCandidate, handleUpload(true), cvController.create);

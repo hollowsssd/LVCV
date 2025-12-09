@@ -8,8 +8,11 @@ import Toast from "@/app/components/Toast";
 import type { CvEvaluateReport, RateCvApiRes } from "@/app/candidate/cv/types";
 import { normalizeRateCv } from "@/app/candidate/cv/types";
 
+/* ===================== Types ===================== */
+
 type ToastState = { type: "success" | "error"; message: string } | null;
-type ApiErrorResponse = { message?: string; detail?: string };
+
+type ApiErrorResponse = { message?: string; detail?: string; error?: string };
 
 type Job = {
   id: number;
@@ -19,28 +22,151 @@ type Job = {
   match: number; // 0–1
 };
 
+type PendingEvaluation = {
+  file: File;
+  jobTitleInput: string;
+  evaluated: CvEvaluateReport;
+  evaluatedAtIso: string;
+};
+
+type DraftMeta = {
+  jobTitleInput: string;
+  evaluatedAtIso: string;
+  fileName: string;
+  fileType: string; // mime
+  report: CvEvaluateReport;
+};
+
+type SavedInfo = {
+  id: string;
+  title: string;
+  fileUrl: string | null;
+  updatedAt: string; // YYYY-MM-DD
+};
+
+type CvCreateResponse = {
+  id: number;
+  title?: string | null;
+  fileUrl?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+};
+
+/* ===================== Const ===================== */
+
 const mockJobs: Job[] = [
   { id: 1, title: "Backend Intern", company: "ABC Software", location: "HCMC", match: 0.91 },
   { id: 2, title: "Node.js Developer (Junior)", company: "XYZ Tech", location: "Remote", match: 0.84 },
   { id: 3, title: "Fullstack Intern (React/Node)", company: "Cool Startup", location: "HCMC", match: 0.79 },
 ];
 
-type PendingEvaluation = {
-  file: File;
-  jobTitleInput: string; // job title user nhập
-  evaluated: CvEvaluateReport; // full report
-  evaluatedAtIso: string;
-};
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
+const CV_SAVE_ENDPOINT = `${API_BASE}/api/cvs`;
+const CV_RATE_ENDPOINT = `${API_BASE}/api/cvs/rate-cv`;
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
+// base keys (sẽ scope theo email)
+const DRAFT_META_KEY = "cv_report_draft";
+const FILE_BLOB_KEY = "cv_report_draft_file";
+const SAVED_INFO_KEY = "cv_saved_info";
+
+/* ===================== Utils ===================== */
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
+function safeJsonParse<T>(raw: string | null): T | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+function toYMD(iso?: string | null): string {
+  if (!iso) return "—";
+  return iso.length >= 10 ? iso.slice(0, 10) : iso;
+}
+
+function safeTrim(v: unknown, fallback: string): string {
+  if (typeof v === "string") {
+    const t = v.trim();
+    return t.length ? t : fallback;
+  }
+  return fallback;
+}
+
+function pickErr(err: unknown, fallback: string): string {
+  const e = err as AxiosError<ApiErrorResponse>;
+  return (
+    e.response?.data?.message ||
+    e.response?.data?.detail ||
+    e.response?.data?.error ||
+    e.message ||
+    fallback
+  );
+}
+
+/* ===================== IndexedDB Helpers (NO any) ===================== */
+
+const DB_NAME = "lvcv_kv_db";
+const DB_VERSION = 1;
+const STORE = "kv";
+
+function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+    };
+
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbSetBlob(key: string, value: Blob): Promise<void> {
+  const db = await openDB();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+async function idbGetBlob(key: string): Promise<Blob | null> {
+  const db = await openDB();
+  const result = await new Promise<Blob | null>((resolve, reject) => {
+    const tx = db.transaction(STORE, "readonly");
+    const req = tx.objectStore(STORE).get(key);
+    req.onsuccess = () => resolve((req.result as Blob | undefined) ?? null);
+    req.onerror = () => reject(req.error);
+  });
+  db.close();
+  return result;
+}
+
+async function idbDel(key: string): Promise<void> {
+  const db = await openDB();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+/* ===================== Inline Alert ===================== */
+
 function InlineAlert({ t }: { t: ToastState }) {
   if (!t) return null;
+
   const cls =
     t.type === "success"
       ? "border-emerald-200 bg-emerald-50 text-emerald-900"
@@ -54,20 +180,23 @@ function InlineAlert({ t }: { t: ToastState }) {
   );
 }
 
+/* ===================== UploadEvaluateModal ===================== */
+
 function UploadEvaluateModal(props: {
   open: boolean;
   onClose: () => void;
   token: string;
-  toast: (t: ToastState, ms?: number) => void; // toast global (ngoài modal)
   onEvaluated: (pending: PendingEvaluation) => void;
+
+  // ✅ keys scope theo user để không dính dữ liệu
+  draftMetaKey: string;
+  fileBlobKey: string;
 }) {
-  const { open, onClose, token, toast, onEvaluated } = props;
+  const { open, onClose, token, onEvaluated, draftMetaKey, fileBlobKey } = props;
 
   const [jobTitle, setJobTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [evaluating, setEvaluating] = useState(false);
-
-  // ✅ message hiển thị ngay trong modal
   const [inlineMsg, setInlineMsg] = useState<ToastState>(null);
 
   useEffect(() => {
@@ -106,14 +235,13 @@ function UploadEvaluateModal(props: {
       form.append("cvfile", file);
       form.append("job_title", jobTitle.trim());
 
-      const res = await axios.post<RateCvApiRes>(`${API_BASE}/api/cvs/rate-cv`, form, {
+      const res = await axios.post<RateCvApiRes>(CV_RATE_ENDPOINT, form, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       const report = normalizeRateCv(res.data);
-
-      if (Number.isNaN(report.score)) {
-        setInlineMsg({ type: "error", message: "Kết quả đánh giá lỗi (thiếu diem_tong)." });
+      if (!Number.isFinite(report.score)) {
+        setInlineMsg({ type: "error", message: "Kết quả đánh giá lỗi: thiếu/không đúng điểm tổng." });
         return;
       }
 
@@ -124,37 +252,34 @@ function UploadEvaluateModal(props: {
         evaluatedAtIso: new Date().toISOString(),
       };
 
+      // ✅ persist draft meta
+      const meta: DraftMeta = {
+        jobTitleInput: pending.jobTitleInput,
+        evaluatedAtIso: pending.evaluatedAtIso,
+        fileName: pending.file.name,
+        fileType: pending.file.type || "application/octet-stream",
+        report: pending.evaluated,
+      };
+
       try {
-        sessionStorage.setItem(
-          "cv_report_draft",
-          JSON.stringify({
-            jobTitleInput: pending.jobTitleInput,
-            evaluatedAtIso: pending.evaluatedAtIso,
-            fileName: pending.file.name,
-            report: pending.evaluated,
-          })
-        );
+        sessionStorage.setItem(draftMetaKey, JSON.stringify(meta));
+      } catch {
+        // ignore
+      }
+
+      // ✅ persist file blob (IndexedDB)
+      try {
+        await idbSetBlob(fileBlobKey, pending.file);
       } catch {
         // ignore
       }
 
       onEvaluated(pending);
 
-      // ✅ Hiện success ngay trong modal trước khi đóng
-      setInlineMsg({ type: "success", message: "Đánh giá CV thành công!" });
-
-      // Đóng modal luôn (nếu muốn nhìn success 0.6s rồi đóng)
-      setTimeout(() => {
-        onClose();
-        toast({ type: "success", message: "Đánh giá CV thành công!" }, 1200); // toast global để user thấy ngoài dashboard
-      }, 450);
+      setInlineMsg({ type: "success", message: "Đánh giá CV thành công! Đang đóng..." });
+      setTimeout(() => onClose(), 450);
     } catch (err) {
-      const e = err as AxiosError<ApiErrorResponse>;
-      const msg =
-        e.response?.data?.message ||
-        e.response?.data?.detail ||
-        "Đánh giá CV thất bại.";
-      setInlineMsg({ type: "error", message: msg });
+      setInlineMsg({ type: "error", message: pickErr(err, "Đánh giá CV thất bại (server lỗi).") });
     } finally {
       setEvaluating(false);
     }
@@ -189,7 +314,6 @@ function UploadEvaluateModal(props: {
           </div>
 
           <div className="p-5 space-y-4">
-            {/* ✅ Alert trong form */}
             {inlineMsg && <InlineAlert t={inlineMsg} />}
 
             <div className="grid md:grid-cols-2 gap-4">
@@ -203,9 +327,7 @@ function UploadEvaluateModal(props: {
                   onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-900 focus:bg-white"
                 />
-                <p className="text-[11px] text-slate-500">
-                  {file ? `Đã chọn: ${file.name}` : "Chọn PDF/DOC/DOCX."}
-                </p>
+                <p className="text-[11px] text-slate-500">{file ? `Đã chọn: ${file.name}` : "Chọn PDF/DOC/DOCX."}</p>
               </div>
 
               <div className="space-y-1">
@@ -229,9 +351,7 @@ function UploadEvaluateModal(props: {
                 disabled={!canEvaluate}
                 className={cn(
                   "rounded-full px-4 py-2 text-sm font-medium",
-                  canEvaluate
-                    ? "bg-slate-900 text-white hover:bg-slate-800"
-                    : "bg-slate-300 text-white cursor-not-allowed"
+                  canEvaluate ? "bg-slate-900 text-white hover:bg-slate-800" : "bg-slate-300 text-white cursor-not-allowed"
                 )}
               >
                 {evaluating ? "Đang đánh giá..." : "Đánh giá CV"}
@@ -239,7 +359,7 @@ function UploadEvaluateModal(props: {
             </div>
 
             <p className="text-[11px] text-slate-500">
-              * Sau khi đánh giá xong, form sẽ tự đóng và kết quả hiển thị ở dashboard.
+              * Đánh giá xong sẽ tự đóng modal và hiện kết quả trên dashboard.
             </p>
           </div>
         </div>
@@ -247,6 +367,8 @@ function UploadEvaluateModal(props: {
     </div>
   );
 }
+
+/* ===================== Dashboard ===================== */
 
 export default function CandidateDashboard() {
   const [toast, setToast] = useState<ToastState>(null);
@@ -265,18 +387,87 @@ export default function CandidateDashboard() {
   }, []);
 
   const token = useMemo(() => Cookies.get("token") || "", []);
-  const role = useMemo(() => Cookies.get("role") || "", []);
+  const role = useMemo(() => (Cookies.get("role") || "").toLowerCase(), []);
+  const owner = useMemo(() => (Cookies.get("email") || "unknown").toLowerCase().trim(), []);
 
-  const [cvSaved, setCvSaved] = useState<{ id: string; updatedAt: string } | null>(null);
+  // ✅ keys scoped theo user (fix dính dữ liệu)
+  const draftMetaKey = useMemo(() => `${DRAFT_META_KEY}:${owner}`, [owner]);
+  const fileBlobKey = useMemo(() => `${FILE_BLOB_KEY}:${owner}`, [owner]);
+  const savedInfoKey = useMemo(() => `${SAVED_INFO_KEY}:${owner}`, [owner]);
+
+  const [cvSaved, setCvSaved] = useState<SavedInfo | null>(null);
   const [pending, setPending] = useState<PendingEvaluation | null>(null);
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadingJobId, setLoadingJobId] = useState<number | null>(null);
 
+  // ✅ cleanup legacy keys (tránh dính từ version cũ)
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem("cv_report_draft");
+      sessionStorage.removeItem("cv_saved_info");
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // ✅ restore saved info + draft theo đúng user
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // saved info
+    const saved = safeJsonParse<SavedInfo>(sessionStorage.getItem(savedInfoKey));
+    if (saved?.id) setCvSaved(saved);
+
+    // draft
+    const meta = safeJsonParse<DraftMeta>(sessionStorage.getItem(draftMetaKey));
+    if (!meta?.report || !meta.fileName) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const blob = await idbGetBlob(fileBlobKey);
+        if (cancelled) return;
+
+        const fileType = meta.fileType || blob?.type || "application/octet-stream";
+        const fileObj =
+          blob != null ? new File([blob], meta.fileName, { type: fileType }) : new File([], meta.fileName, { type: fileType });
+
+        setPending({
+          file: fileObj,
+          jobTitleInput: meta.jobTitleInput,
+          evaluated: meta.report,
+          evaluatedAtIso: meta.evaluatedAtIso,
+        });
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [draftMetaKey, fileBlobKey, savedInfoKey]);
+
+  // chặn role khác candidate
+  if (role && role !== "candidate") {
+    return (
+      <div className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm">
+        <p className="text-sm font-semibold text-slate-900">Không có quyền truy cập</p>
+        <p className="mt-1 text-sm text-slate-600">Trang này chỉ dành cho tài khoản Candidate.</p>
+      </div>
+    );
+  }
+
   const saveCv = async () => {
     if (!pending) {
       showToast({ type: "error", message: "Bạn chưa đánh giá CV." }, 1500);
+      return;
+    }
+    if (!token) {
+      showToast({ type: "error", message: "Bạn cần đăng nhập Candidate để lưu CV." }, 1800);
       return;
     }
 
@@ -287,24 +478,44 @@ export default function CandidateDashboard() {
       form.append("cv", pending.file);
       form.append("title", pending.file.name);
 
-      const res = await axios.post<{ id: number; updatedAt?: string }>(`${API_BASE}/api/cvs`, form, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      const res = await axios.post<CvCreateResponse>(CV_SAVE_ENDPOINT, form, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      const saved = res.data;
+      const saved: SavedInfo = {
+        id: String(res.data.id),
+        title: safeTrim(res.data.title, pending.file.name),
+        fileUrl: res.data.fileUrl ?? null,
+        updatedAt: toYMD(res.data.updatedAt ?? new Date().toISOString()),
+      };
 
-      setCvSaved({
-        id: String(saved.id),
-        updatedAt: saved.updatedAt ? saved.updatedAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
-      });
+      setCvSaved(saved);
 
-      showToast({ type: "success", message: "Lưu CV (file) thành công!" }, 1200);
+      // ✅ persist saved info theo user
+      try {
+        sessionStorage.setItem(savedInfoKey, JSON.stringify(saved));
+      } catch {
+        // ignore
+      }
 
-      // reset trang sau khi lưu xong (như bạn yêu cầu)
-      window.location.reload();
+      // ✅ clear draft theo user (vì bạn muốn lưu xong reset đánh giá)
+      try {
+        sessionStorage.removeItem(draftMetaKey);
+      } catch {
+        // ignore
+      }
+      try {
+        await idbDel(fileBlobKey);
+      } catch {
+        // ignore
+      }
+
+      setPending(null);
+
+      showToast({ type: "success", message: `Đã lưu CV: ${saved.title}` }, 1500);
+      setTimeout(() => window.location.reload(), 900);
     } catch (err) {
-      const e = err as AxiosError<ApiErrorResponse>;
-      showToast({ type: "error", message: e.response?.data?.message ?? "Lưu CV thất bại." }, 2000);
+      showToast({ type: "error", message: pickErr(err, "Lưu CV thất bại.") }, 2200);
     } finally {
       setSaving(false);
     }
@@ -320,25 +531,16 @@ export default function CandidateDashboard() {
       }
 
       await new Promise((r) => setTimeout(r, 600));
-      showToast({ type: "success", message: `Đã nộp CV cho "${job.title}" thành công.` }, 1000);
+      showToast({ type: "success", message: `Đã nộp CV cho "${job.title}" thành công.` }, 1100);
     } catch {
-      showToast({ type: "error", message: "Không thể nộp CV lúc này. Vui lòng thử lại." }, 1200);
+      showToast({ type: "error", message: "Không thể nộp CV lúc này. Vui lòng thử lại." }, 1400);
     } finally {
       setLoadingJobId(null);
     }
   };
 
-  if (role && role !== "candidate") {
-    return (
-      <div className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm">
-        <p className="text-sm font-semibold text-slate-900">Không có quyền truy cập</p>
-        <p className="mt-1 text-sm text-slate-600">Trang này chỉ dành cho tài khoản Candidate.</p>
-      </div>
-    );
-  }
-
   const displayedScore = pending?.evaluated.score ?? null;
-  const displayedUpdatedAt = pending?.evaluatedAtIso?.slice(0, 10) ?? cvSaved?.updatedAt ?? "—";
+  const displayedUpdatedAt = pending?.evaluatedAtIso ? toYMD(pending.evaluatedAtIso) : cvSaved?.updatedAt ?? "—";
 
   return (
     <>
@@ -348,14 +550,16 @@ export default function CandidateDashboard() {
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
         token={token}
-        toast={showToast}
         onEvaluated={(p) => setPending(p)}
+        draftMetaKey={draftMetaKey}
+        fileBlobKey={fileBlobKey}
       />
 
       <div className="space-y-8">
+        {/* Header */}
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl md:text-2xl font-semibold text-slate-900">Candidate Dashboard</h1>
+            <h1 className="text-xl md:text-2xl font-semibold text-slate-900">Đánh giá CV & Gợi ý việc làm</h1>
             <p className="text-sm text-slate-500">Upload CV → Đánh giá → Hiện kết quả → Lưu CV.</p>
           </div>
 
@@ -375,6 +579,7 @@ export default function CandidateDashboard() {
         </div>
 
         <div className="grid md:grid-cols-[1.25fr,1.75fr] gap-6">
+          {/* Left */}
           <section className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -413,7 +618,7 @@ export default function CandidateDashboard() {
                   </span>
                 </div>
 
-                {(pending.evaluated.strengths.length || pending.evaluated.weaknesses.length) && (
+                {(pending.evaluated.strengths.length > 0 || pending.evaluated.weaknesses.length > 0) && (
                   <div className="grid grid-cols-2 gap-3 text-[11px]">
                     <div className="rounded-xl border border-slate-200 bg-white p-3">
                       <p className="font-semibold text-slate-900 mb-1">Điểm mạnh</p>
@@ -464,15 +669,27 @@ export default function CandidateDashboard() {
                 </div>
 
                 <p className="text-[11px] text-slate-500">
-                  * Lưu CV: hiện tại chỉ lưu <b>file</b> lên hệ thống (không lưu điểm).
+                  * Lưu CV: chỉ lưu <b>file</b> lên hệ thống. Lưu xong sẽ reset phần đánh giá và reload trang.
                 </p>
               </div>
             ) : cvSaved ? (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-700">
-                Đã lưu CV file. CV ID: <b>{cvSaved.id}</b>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-700 space-y-2">
+                <div>
+                  Đã lưu CV: <b>{cvSaved.title}</b>
+                </div>
+                {cvSaved.fileUrl ? (
+                  <a
+                    href={`${API_BASE}${cvSaved.fileUrl}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:border-slate-900"
+                  >
+                    Xem file đã lưu
+                  </a>
+                ) : null}
               </div>
             ) : (
-              <p className="text-[11px] text-slate-500">Bạn chưa có CV. Hãy upload để nhận score.</p>
+              <p className="text-[11px] text-slate-500">Bạn chưa có đánh giá. Hãy upload để nhận score.</p>
             )}
 
             <div className="mt-3 rounded-2xl bg-slate-50 border border-dashed border-slate-200 p-3 text-[11px] text-slate-500">
@@ -480,6 +697,7 @@ export default function CandidateDashboard() {
             </div>
           </section>
 
+          {/* Right */}
           <section className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-900">Job gợi ý từ AI</h2>

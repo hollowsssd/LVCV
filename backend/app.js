@@ -34,8 +34,7 @@ app.use('/api/employers', employerRouter);
 app.use('/api/jobs', jobRouter);
 app.use('/api/users', userRouter);
 app.use('/api/auth', auth);
-app.use('/api/cv', Cv);
-
+// app.use('/api/cv', Cv);
 console.log("Hello Worlds!");
 
 module.exports = app;
