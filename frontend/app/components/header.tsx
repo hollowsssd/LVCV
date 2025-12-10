@@ -1,16 +1,14 @@
 "use client";
 
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import Cookies from "js-cookie";
 import { Bell } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
-import axios, { AxiosError } from "axios";
-import { Bell } from "lucide-react";
-import ThemeToggle from "./ThemeToggle";
+import { useEffect, useRef, useState } from "react";
 import { useSocket } from "../hooks/useSocket";
+import ThemeToggle from "./ThemeToggle";
 
 type User = {
   email: string;
@@ -81,12 +79,14 @@ export default function Header() {
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
-  // đọc cookies mỗi lần route change (đủ dùng)
-  const auth = useMemo(() => {
-    if (typeof window === "undefined") {
-      return { token: "", user: null as User | null };
-    }
+  // State cho auth - khởi tạo null để tránh hydration mismatch
+  const [auth, setAuth] = useState<{ token: string; user: User | null }>({
+    token: "",
+    user: null,
+  });
 
+  // Đọc cookies trong useEffect để đảm bảo chỉ chạy trên client
+  useEffect(() => {
     const tokenRaw = Cookies.get("token") || "";
     const token = cleanBearer(tokenRaw);
 
@@ -97,10 +97,10 @@ export default function Header() {
 
     // token không đúng dạng -> coi như chưa login
     if (!token || !isLikelyJwt(token) || !role || !email) {
-      return { token: "", user: null as User | null };
+      setAuth({ token: "", user: null });
+    } else {
+      setAuth({ token, user: { email, role } as User });
     }
-
-    return { token, user: { email, role } as User };
   }, [pathname]);
 
   const token = auth.token;
@@ -270,13 +270,11 @@ export default function Header() {
           ))}
 
           {isCandidate && (
-            <Link
-              href="/candidate/job"
+            <Link href="/candidate/job"
               className={[
                 "hover:text-slate-900 dark:hover:text-white",
                 pathname?.startsWith("/job") ? "text-slate-900 font-semibold dark:text-slate-100" : "",
               ].join(" ")}
-              className={["hover:text-slate-900", pathname?.startsWith("/candidate/job") ? "text-slate-900 font-semibold" : ""].join(" ")}
               onClick={() => {
                 setMenuOpen(false);
                 setNotiOpen(false);
@@ -330,14 +328,10 @@ export default function Header() {
                   aria-label="Notifications"
                 >
                   <Bell size={18} className="text-slate-700 dark:text-slate-200" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white
-                                     dark:ring-slate-900" />
-                  <Bell size={18} className="text-slate-700" />
 
                   {/* Badge hiển thị số chưa đọc (từ socket) */}
                   {socketUnread > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 ring-2 ring-white flex items-center justify-center text-[10px] text-white font-bold">
+                    <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 ring-2 ring-white flex items-center justify-center text-[10px] text-white font-bold dark:ring-slate-900">
                       {socketUnread > 9 ? "9+" : socketUnread}
                     </span>
                   )}
