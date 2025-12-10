@@ -156,42 +156,58 @@ export default function CreateJobPage() {
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-xl md:text-2xl font-semibold text-slate-900">Tạo job mới</h1>
+          <h1 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            Tạo job mới
+          </h1>
         </div>
 
-        <section className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm">
+        <section className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm
+                          dark:border-slate-800 dark:bg-slate-950/30">
           <form className="space-y-5" onSubmit={handleSubmit}>
+            {/* Title */}
             <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-700">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Tiêu đề <span className="text-red-500">*</span>
               </label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Ví dụ: Backend Intern (Node.js)"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-900 focus:bg-white"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none
+                         focus:border-slate-900 focus:bg-white
+                         dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder:text-slate-500
+                         dark:focus:border-slate-200 dark:focus:bg-slate-950/60"
               />
             </div>
 
+            {/* Location + JobType */}
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Địa điểm <span className="text-red-500">*</span>
                 </label>
                 <input
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="Ví dụ: Ho Chi Minh / Ha Noi / Remote"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-900 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none
+                           focus:border-slate-900 focus:bg-white
+                           dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder:text-slate-500
+                           dark:focus:border-slate-200 dark:focus:bg-slate-950/60"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">Vị trí ứng tuyển</label>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Vị trí ứng tuyển
+                </label>
                 <select
                   value={jobType}
                   onChange={(e) => setJobType(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-900 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none
+                           focus:border-slate-900 focus:bg-white
+                           dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100
+                           dark:focus:border-slate-200 dark:focus:bg-slate-950/60"
                 >
                   <option value="Onsite">Onsite</option>
                   <option value="Hybrid">Hybrid</option>
@@ -203,13 +219,19 @@ export default function CreateJobPage() {
               </div>
             </div>
 
+            {/* Experience + Status */}
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">Số năm kinh nghiệm</label>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Số năm kinh nghiệm
+                </label>
                 <select
                   value={experienceRequired}
                   onChange={(e) => setExperienceRequired(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-900 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none
+                           focus:border-slate-900 focus:bg-white
+                           dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100
+                           dark:focus:border-slate-200 dark:focus:bg-slate-950/60"
                 >
                   <option value="0-1 year">0–1 year</option>
                   <option value="1-2 years">1–2 years</option>
@@ -219,11 +241,16 @@ export default function CreateJobPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">Trạng thái</label>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Trạng thái
+                </label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as CreateJobPayload["status"])}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-900 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none
+                           focus:border-slate-900 focus:bg-white
+                           dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100
+                           dark:focus:border-slate-200 dark:focus:bg-slate-950/60"
                 >
                   <option value="OPEN">OPEN</option>
                   <option value="CLOSED">CLOSED</option>
@@ -231,23 +258,31 @@ export default function CreateJobPage() {
               </div>
             </div>
 
+            {/* Deadline */}
             <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-700">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Thời hạn nộp <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-900 focus:bg-white"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none
+                         focus:border-slate-900 focus:bg-white
+                         dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100
+                         dark:focus:border-slate-200 dark:focus:bg-slate-950/60"
               />
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
+            {/* Salary box */}
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-3
+                          dark:border-slate-800 dark:bg-slate-950/25">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-slate-900">Mức lương</p>
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  Mức lương
+                </p>
 
-                <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                <label className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                   <input
                     type="checkbox"
                     checked={isNegotiable}
@@ -260,7 +295,9 @@ export default function CreateJobPage() {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Tối thiểu</label>
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Tối thiểu
+                  </label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -273,13 +310,20 @@ export default function CreateJobPage() {
                       e.preventDefault();
                       setSalaryMin(digitsOnly(e.clipboardData.getData("text")));
                     }}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900 disabled:bg-slate-100"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none
+                             focus:border-slate-900
+                             disabled:bg-slate-100
+                             dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder:text-slate-500
+                             dark:focus:border-slate-200
+                             dark:disabled:bg-slate-900/50"
                     placeholder="0"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Tối đa</label>
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Tối đa
+                  </label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -292,15 +336,21 @@ export default function CreateJobPage() {
                       e.preventDefault();
                       setSalaryMax(digitsOnly(e.clipboardData.getData("text")));
                     }}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900 disabled:bg-slate-100"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none
+                             focus:border-slate-900
+                             disabled:bg-slate-100
+                             dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder:text-slate-500
+                             dark:focus:border-slate-200
+                             dark:disabled:bg-slate-900/50"
                     placeholder="0"
                   />
                 </div>
               </div>
             </div>
 
+            {/* Description */}
             <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-700">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Mô tả <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -308,18 +358,28 @@ export default function CreateJobPage() {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={7}
                 placeholder="Mô tả chi tiết công việc, yêu cầu kỹ năng, nhiệm vụ..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-900 focus:bg-white resize-none"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none resize-none
+                         focus:border-slate-900 focus:bg-white
+                         dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder:text-slate-500
+                         dark:focus:border-slate-200 dark:focus:bg-slate-950/60"
               />
             </div>
 
+            {/* Footer form */}
             <div className="flex items-center justify-between pt-2">
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-400 dark:text-slate-500">
                 Các trường có dấu <span className="text-red-500">*</span> là bắt buộc.
               </p>
+
               <button
                 type="submit"
                 disabled={loading}
-                className="rounded-full bg-slate-900 text-white text-sm font-medium px-4 py-2 shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="
+                rounded-full px-4 py-2 text-sm font-medium shadow-sm transition
+                border border-slate-200 bg-slate-900 text-white hover:bg-slate-800 hover:border-slate-900
+                disabled:opacity-60 disabled:cursor-not-allowed
+                dark:border-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white dark:hover:border-slate-200
+              "
               >
                 {loading ? "Đang tạo..." : "Tạo job"}
               </button>

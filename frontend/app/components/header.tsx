@@ -9,6 +9,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios, { AxiosError } from "axios";
 import { Bell } from "lucide-react";
+import ThemeToggle from "./ThemeToggle";
 import { useSocket } from "../hooks/useSocket";
 
 type User = {
@@ -151,7 +152,7 @@ export default function Header() {
         });
         setSocketUnread(Number(res.data?.count ?? 0));
       } catch {
-        // BE chưa có -> im lặng
+        // ignore
       }
     };
     // Fetch lần đầu
@@ -246,7 +247,8 @@ export default function Header() {
   const isCandidate = user?.role === "candidate";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-sm">
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-sm
+                       dark:border-slate-800 dark:bg-slate-950/70">
       <div className="mx-auto max-w-6xl px-4 flex h-14 items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
@@ -254,15 +256,15 @@ export default function Header() {
             <Image src="/logo.png" alt="Logo" fill className="object-cover" priority />
           </div>
           <div className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold text-slate-900">LVCV - AI JobMatch</span>
-            <span className="text-[11px] text-slate-500">Chấm điểm CV - Tìm việc phù hợp</span>
+            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">LVCV - AI JobMatch</span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">Chấm điểm CV - Tìm việc phù hợp</span>
           </div>
         </Link>
 
         {/* Nav */}
-        <nav className="hidden md:flex items-center gap-6 text-xs text-slate-600">
+        <nav className="hidden md:flex items-center gap-6 text-xs text-slate-600 dark:text-slate-300">
           {menuItems.map((item) => (
-            <a key={item.href} href={item.href} className="hover:text-slate-900">
+            <a key={item.href} href={item.href} className="hover:text-slate-900 dark:hover:text-white">
               {item.label}
             </a>
           ))}
@@ -270,6 +272,10 @@ export default function Header() {
           {isCandidate && (
             <Link
               href="/candidate/job"
+              className={[
+                "hover:text-slate-900 dark:hover:text-white",
+                pathname?.startsWith("/job") ? "text-slate-900 font-semibold dark:text-slate-100" : "",
+              ].join(" ")}
               className={["hover:text-slate-900", pathname?.startsWith("/candidate/job") ? "text-slate-900 font-semibold" : ""].join(" ")}
               onClick={() => {
                 setMenuOpen(false);
@@ -298,23 +304,35 @@ export default function Header() {
         <div className="flex items-center gap-2" ref={wrapRef}>
           {!user ? (
             <>
-              <Link href="/auth/login" className="text-xs font-medium text-slate-700 hover:text-slate-900">
+              <Link href="/auth/login" className="text-xs font-medium text-slate-700 hover:text-slate-900
+                                                 dark:text-slate-200 dark:hover:text-white">
                 Đăng nhập
               </Link>
-              <Link href="/auth/register" className="rounded-full bg-slate-900 text-white text-xs font-medium px-3 py-1.5 hover:bg-slate-800">
+              <Link href="/auth/register"
+                className="rounded-full bg-slate-900 text-white text-xs font-medium px-3 py-1.5 hover:bg-slate-800
+                           dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+              >
                 Bắt đầu ngay
               </Link>
             </>
           ) : (
             <>
-              {/* ========== BELL ICON VỚI BADGE ========== */}
+              {/* Theme button */}
+              <ThemeToggle />
+
+              {/* Bell */}
               <div className="relative">
                 <button
                   type="button"
                   onClick={openNoti}
-                  className="relative rounded-full border border-slate-200 bg-white p-2 hover:border-slate-900"
+                  className="relative rounded-full border border-slate-200 bg-white p-2 hover:border-slate-900
+                             dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-200"
                   aria-label="Notifications"
                 >
+                  <Bell size={18} className="text-slate-700 dark:text-slate-200" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white
+                                     dark:ring-slate-900" />
                   <Bell size={18} className="text-slate-700" />
 
                   {/* Badge hiển thị số chưa đọc (từ socket) */}
@@ -348,21 +366,25 @@ export default function Header() {
 
                     <div className="max-h-80 overflow-auto">
                       {loadingNotis ? (
-                        <div className="px-3 py-6 text-center text-slate-500">Đang tải...</div>
+                        <div className="px-3 py-6 text-center text-slate-500 dark:text-slate-400">Đang tải...</div>
                       ) : notis.length === 0 ? (
-                        <div className="px-3 py-6 text-center text-slate-500">Chưa có thông báo</div>
+                        <div className="px-3 py-6 text-center text-slate-500 dark:text-slate-400">Chưa có thông báo</div>
                       ) : (
                         notis.map((n) => (
                           <button
                             key={n.id}
-                            onClick={() => void markReadAndGo(n)}
-                            className={["w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-slate-50", !n.isRead ? "bg-slate-50/70" : ""].join(" ")}
+                            onClick={() => markReadAndGo(n)}
+                            className={[
+                              "w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-slate-50",
+                              "dark:border-slate-800 dark:hover:bg-slate-800",
+                              !n.isRead ? "bg-slate-50/70 dark:bg-slate-800/40" : "",
+                            ].join(" ")}
                           >
                             <div className="flex items-start gap-2">
                               {!n.isRead && <span className="mt-1.5 h-2 w-2 rounded-full bg-red-500" />}
                               <div className="min-w-0">
-                                <p className="text-slate-900 font-medium truncate">{n.title}</p>
-                                <p className="text-slate-500 line-clamp-2">{n.message}</p>
+                                <p className="text-slate-900 font-medium truncate dark:text-slate-100">{n.title}</p>
+                                <p className="text-slate-500 line-clamp-2 dark:text-slate-300">{n.message}</p>
                               </div>
                             </div>
                           </button>
@@ -370,10 +392,12 @@ export default function Header() {
                       )}
                     </div>
 
-                    <div className="px-3 py-2 border-t border-slate-100 bg-white">
+                    <div className="px-3 py-2 border-t border-slate-100 bg-white
+                                    dark:border-slate-800 dark:bg-slate-900">
                       <Link
                         href="/notifications"
-                        className="block text-center text-[11px] font-medium text-slate-700 hover:text-slate-900"
+                        className="block text-center text-[11px] font-medium text-slate-700 hover:text-slate-900
+                                   dark:text-slate-200 dark:hover:text-white"
                         onClick={() => setNotiOpen(false)}
                       >
                         Xem tất cả
@@ -391,29 +415,32 @@ export default function Header() {
                     setNotiOpen(false);
                     setMenuOpen((p) => !p);
                   }}
-                  className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs hover:border-slate-900"
+                  className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs hover:border-slate-900
+                             dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-200"
                 >
-                  <div className="h-6 w-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[11px]">
-                    {user.email[0]?.toUpperCase() || "U"}
+                  <div className="h-6 w-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[11px]
+                                  dark:bg-slate-100 dark:text-slate-900">
+                    {user.email[0].toUpperCase()}
                   </div>
                   <div className="hidden sm:flex flex-col text-left">
-                    <span className="text-xs font-medium text-slate-900">{user.email}</span>
-                    <span className="text-[10px] text-slate-500 uppercase">{user.role}</span>
+                    <span className="text-xs font-medium text-slate-900 dark:text-slate-100">{user.email}</span>
+                    <span className="text-[10px] text-slate-500 uppercase dark:text-slate-400">{user.role}</span>
                   </div>
                 </button>
 
                 {menuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-2xl border border-slate-200 bg-white shadow-md text-xs overflow-hidden">
-                    <div className="px-3 py-2 border-b border-slate-100">
-                      <p className="font-medium text-slate-900">Tài khoản</p>
-                      <p className="text-[11px] text-slate-500 truncate">{user.email}</p>
+                  <div className="absolute right-0 mt-2 w-48 rounded-2xl border border-slate-200 bg-white shadow-md text-xs overflow-hidden
+                                  dark:border-slate-800 dark:bg-slate-900">
+                    <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
+                      <p className="font-medium text-slate-900 dark:text-slate-100">Tài khoản</p>
+                      <p className="text-[11px] text-slate-500 truncate dark:text-slate-400">{user.email}</p>
                     </div>
 
                     <div className="py-1">
                       {user.role === "candidate" ? (
                         <Link
-                          href="/candidate/profile"
-                          className="block px-3 py-2 hover:bg-slate-50"
+                          href="/candidate/dashboard"
+                          className="block px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-200"
                           onClick={() => setMenuOpen(false)}
                         >
                           Hồ sơ người dùng
@@ -421,14 +448,17 @@ export default function Header() {
                       ) : (
                         <Link
                           href="/employer/dashboard"
-                          className="block px-3 py-2 hover:bg-slate-50"
+                          className="block px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-200"
                           onClick={() => setMenuOpen(false)}
                         >
                           Hồ sơ nhà tuyển dụng
                         </Link>
                       )}
 
-                      <button onClick={handleLogout} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-red-600">
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-50 text-red-600 dark:hover:bg-slate-800"
+                      >
                         Đăng xuất
                       </button>
                     </div>

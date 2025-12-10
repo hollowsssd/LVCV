@@ -10,7 +10,11 @@ const path = require("path");
 const fs = require("fs");
 const auth = require("../app/middlewares/auth");
 
-const uploadDir = path.join(process.cwd(), "uploads", "cvs");
+// cvRoute.js nằm ở: backend/src/routes
+// lên 3 cấp sẽ ra project root (ngang backend/frontend)
+const PROJECT_ROOT = path.resolve(__dirname, "../../../");
+const uploadDir = path.join(PROJECT_ROOT, "uploads", "cvs");
+
 fs.mkdirSync(uploadDir, { recursive: true });
 const allowedExt = new Set([".pdf", ".doc", ".docx"]);
 
