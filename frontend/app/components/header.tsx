@@ -95,7 +95,7 @@ export default function Header() {
 
     const email = (Cookies.get("email") || "").trim();
 
-    // token không đúng dạng -> coi như chưa login
+    // token không đúng dạng 
     if (!token || !isLikelyJwt(token) || !role || !email) {
       setAuth({ token: "", user: null });
     } else {
