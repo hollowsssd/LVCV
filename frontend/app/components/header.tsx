@@ -1,12 +1,15 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import axios from "axios";
 import Cookies from "js-cookie";
+import { Bell } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios, { AxiosError } from "axios";
 import { Bell } from "lucide-react";
+import { useSocket } from "../hooks/useSocket";
 
 type User = {
   email: string;
@@ -23,7 +26,6 @@ type Noti = {
 };
 
 type UnreadCountRes = { count: number };
-type ListNotiRes = Noti[];
 
 type ApiErr = { message?: string; error?: string; detail?: string };
 
@@ -64,7 +66,15 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notiOpen, setNotiOpen] = useState(false);
 
-  const [unreadCount, setUnreadCount] = useState(0);
+  const {
+    isConnected,                    // Trạng thái kết nối socket
+    notifications: socketNotis,     // Notifications nhận từ socket
+    unreadCount: socketUnread,      // Số chưa đọc từ socket
+    setUnreadCount: setSocketUnread,// Setter để sync với API
+    markAsRead: socketMarkAsRead,   // Hàm đánh dấu đã đọc
+  } = useSocket();
+
+  // State cho notifications (merge socket + API)
   const [notis, setNotis] = useState<Noti[]>([]);
   const [loadingNotis, setLoadingNotis] = useState(false);
 
@@ -95,7 +105,7 @@ export default function Header() {
   const token = auth.token;
   const user = auth.user;
 
-  // nếu cookie token đang lỗi (ví dụ "Bearer Bearer" hoặc rỗng) -> dọn luôn
+  // nếu cookie token đang lỗi 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -110,7 +120,7 @@ export default function Header() {
     }
   }, [pathname]);
 
-  // click outside -> close dropdowns
+  // Click outside -> close dropdowns
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
       if (!wrapRef.current) return;
@@ -123,10 +133,12 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", onMouseDown);
   }, []);
 
-  // poll unread count
+
+  // Chỉ fetch 1 lần khi mount để lấy count ban đầu
+  // Sau đó socket sẽ tự động update real-time
   useEffect(() => {
     if (!user || !token) {
-      setUnreadCount(0);
+      setSocketUnread(0);
       return;
     }
 
@@ -137,21 +149,18 @@ export default function Header() {
         const res = await axios.get<UnreadCountRes>(`${API_BASE}/api/notifications/unread-count`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (!alive) return;
-        setUnreadCount(Number(res.data?.count ?? 0));
+        setSocketUnread(Number(res.data?.count ?? 0));
       } catch {
         // BE chưa có -> im lặng
       }
     };
-
+    // Fetch lần đầu
     fetchCount();
-
-    const intervalId: ReturnType<typeof setInterval> = setInterval(fetchCount, 12000);
-    return () => {
-      alive = false;
-      clearInterval(intervalId);
-    };
-  }, [user, token]);
+    // Không cần polling nữa vì có socket real-time
+    // Nhưng giữ lại polling 60s để đảm bảo sync (backup)
+    const intervalId = setInterval(fetchCount, 60000);
+    return () => clearInterval(intervalId);
+  }, [user, token, setSocketUnread]);
 
   const handleLogout = () => {
     Cookies.remove("token", { path: "/" });
@@ -171,16 +180,29 @@ export default function Header() {
     { href: "/#for-whom", label: "Đối tượng sử dụng" },
   ];
 
+  // FETCH NOTIFICATIONS  
   const fetchNotis = async () => {
     if (!user || !token) return;
     try {
       setLoadingNotis(true);
-      const res = await axios.get<ListNotiRes>(`${API_BASE}/api/notifications?limit=10`, {
+      const res = await axios.get(`${API_BASE}/api/notifications?limit=10`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setNotis(Array.isArray(res.data) ? res.data : []);
+
+      // Lấy data từ API (có thể là array hoặc object với key notifications)
+      const apiNotis = res.data?.notifications || res.data || [];
+
+      // MERGE SOCKET + API NOTIFICATIONS
+      // Socket có thể có notifications mới chưa có trong API response
+      // Merge và loại bỏ duplicate theo id
+      const socketIds = new Set(socketNotis.map(n => n.id));
+      const uniqueApiNotis = apiNotis.filter((n: Noti) => !socketIds.has(n.id));
+
+      // Socket notifications đầu tiên (mới nhất), sau đó là API
+      setNotis([...socketNotis, ...uniqueApiNotis]);
     } catch {
-      setNotis([]);
+      // Nếu API lỗi, vẫn hiện socket notifications
+      setNotis(socketNotis);
     } finally {
       setLoadingNotis(false);
     }
@@ -188,7 +210,6 @@ export default function Header() {
 
   const openNoti = () => {
     if (!user || !token) return;
-
     setMenuOpen(false);
     setNotiOpen((prev) => {
       const next = !prev;
@@ -197,16 +218,21 @@ export default function Header() {
     });
   };
 
+  // ĐÁNH DẤU ĐÃ ĐỌC VÀ NAVIGATE
   const markReadAndGo = async (n: Noti) => {
     if (!user || !token) return;
 
     try {
       if (!n.isRead) {
-        await axios.patch(`${API_BASE}/api/notifications/${n.id}/read`, null, {
+        // Gọi API đánh dấu đã đọc
+        await axios.put(`${API_BASE}/api/notifications/${n.id}/read`, null, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        setUnreadCount((c) => Math.max(0, c - 1));
+        // Cập nhật socket state
+        socketMarkAsRead(n.id);
+
+        // Cập nhật local state
         setNotis((prev) => prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
       }
     } catch {
@@ -281,7 +307,7 @@ export default function Header() {
             </>
           ) : (
             <>
-              {/* Bell */}
+              {/* ========== BELL ICON VỚI BADGE ========== */}
               <div className="relative">
                 <button
                   type="button"
@@ -290,16 +316,34 @@ export default function Header() {
                   aria-label="Notifications"
                 >
                   <Bell size={18} className="text-slate-700" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+
+                  {/* Badge hiển thị số chưa đọc (từ socket) */}
+                  {socketUnread > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 ring-2 ring-white flex items-center justify-center text-[10px] text-white font-bold">
+                      {socketUnread > 9 ? "9+" : socketUnread}
+                    </span>
+                  )}
+
+                  {/* Indicator xanh khi socket connected */}
+                  {isConnected && (
+                    <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 ring-1 ring-white" />
                   )}
                 </button>
 
+                {/* ========== NOTIFICATION DROPDOWN ========== */}
                 {notiOpen && (
                   <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-slate-200 bg-white shadow-md overflow-hidden text-xs">
                     <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
                       <p className="font-medium text-slate-900">Thông báo</p>
-                      <span className="text-[11px] text-slate-500">{unreadCount} chưa đọc</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-slate-500">{socketUnread} chưa đọc</span>
+                        {/* Hiển thị trạng thái socket */}
+                        {isConnected ? (
+                          <span className="text-[10px] text-green-600">● Live</span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400">○ Offline</span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="max-h-80 overflow-auto">
