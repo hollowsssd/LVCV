@@ -7,6 +7,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import axios, { AxiosError } from "axios";
+import { Bell } from "lucide-react";
 import { useSocket } from "../hooks/useSocket";
 
 type User = {
@@ -25,7 +27,37 @@ type Noti = {
 
 type UnreadCountRes = { count: number };
 
-const API_BASE = "http://localhost:8080";
+type ApiErr = { message?: string; error?: string; detail?: string };
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
+
+/* ================== helpers ================== */
+
+function cleanBearer(raw: string): string {
+  let t = String(raw || "").trim();
+  // xóa nhiều lần "Bearer " nếu bị dính "Bearer Bearer ..."
+  while (/^bearer\s+/i.test(t)) t = t.replace(/^bearer\s+/i, "").trim();
+  // nếu còn rác sau token -> lấy token đầu tiên
+  t = t.split(/\s+/)[0]?.trim() || "";
+  return t;
+}
+
+function isLikelyJwt(token: string): boolean {
+  // JWT thường có 2 dấu chấm
+  return token.split(".").length === 3;
+}
+
+function normalizeRole(role: string): User["role"] | "" {
+  const r = String(role || "").toLowerCase().trim();
+  if (r === "candidate") return "candidate";
+  if (r === "employer") return "employer";
+  return "";
+}
+
+function pickErr(e: unknown, fallback: string): string {
+  const err = e as AxiosError<ApiErr>;
+  return err.response?.data?.message || err.response?.data?.error || err.response?.data?.detail || err.message || fallback;
+}
 
 export default function Header() {
   const pathname = usePathname();
@@ -33,7 +65,6 @@ export default function Header() {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [notiOpen, setNotiOpen] = useState(false);
-  const [authTick, setAuthTick] = useState(0);
 
   const {
     isConnected,                    // Trạng thái kết nối socket
@@ -49,21 +80,45 @@ export default function Header() {
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
-  const user = useMemo<User | null>(() => {
-    if (typeof window === "undefined") return null;
+  // đọc cookies mỗi lần route change (đủ dùng)
+  const auth = useMemo(() => {
+    if (typeof window === "undefined") {
+      return { token: "", user: null as User | null };
+    }
 
-    const token = Cookies.get("token");
-    const role = Cookies.get("role") as User["role"] | undefined;
-    const email = Cookies.get("email");
+    const tokenRaw = Cookies.get("token") || "";
+    const token = cleanBearer(tokenRaw);
 
-    if (token && role && email) return { email, role };
-    return null;
-  }, [pathname, authTick]);
+    const roleRaw = Cookies.get("role") || "";
+    const role = normalizeRole(roleRaw);
 
-  const token = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    return Cookies.get("token") || "";
-  }, [pathname, authTick]);
+    const email = (Cookies.get("email") || "").trim();
+
+    // token không đúng dạng -> coi như chưa login
+    if (!token || !isLikelyJwt(token) || !role || !email) {
+      return { token: "", user: null as User | null };
+    }
+
+    return { token, user: { email, role } as User };
+  }, [pathname]);
+
+  const token = auth.token;
+  const user = auth.user;
+
+  // nếu cookie token đang lỗi 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const raw = Cookies.get("token") || "";
+    const cleaned = cleanBearer(raw);
+
+    // có raw mà cleaned không phải jwt => xóa để khỏi spam "jwt malformed"
+    if (raw && (!cleaned || !isLikelyJwt(cleaned))) {
+      Cookies.remove("token", { path: "/" });
+      Cookies.remove("role", { path: "/" });
+      Cookies.remove("email", { path: "/" });
+    }
+  }, [pathname]);
 
   // Click outside -> close dropdowns
   useEffect(() => {
@@ -87,6 +142,8 @@ export default function Header() {
       return;
     }
 
+    let alive = true;
+
     const fetchCount = async () => {
       try {
         const res = await axios.get<UnreadCountRes>(`${API_BASE}/api/notifications/unread-count`, {
@@ -97,10 +154,8 @@ export default function Header() {
         // BE chưa có -> im lặng
       }
     };
-
     // Fetch lần đầu
     fetchCount();
-
     // Không cần polling nữa vì có socket real-time
     // Nhưng giữ lại polling 60s để đảm bảo sync (backup)
     const intervalId = setInterval(fetchCount, 60000);
@@ -114,7 +169,6 @@ export default function Header() {
 
     setMenuOpen(false);
     setNotiOpen(false);
-    setAuthTick((t) => t + 1);
 
     router.push("/");
     router.refresh();
@@ -154,12 +208,12 @@ export default function Header() {
     }
   };
 
-  const openNoti = async () => {
+  const openNoti = () => {
     if (!user || !token) return;
     setMenuOpen(false);
     setNotiOpen((prev) => {
       const next = !prev;
-      if (next) fetchNotis();
+      if (next) void fetchNotis();
       return next;
     });
   };
@@ -213,20 +267,29 @@ export default function Header() {
             </a>
           ))}
 
-          {/*  Candidate-only: Danh sách việc làm */}
           {isCandidate && (
             <Link
               href="/candidate/job"
-              className={[
-                "hover:text-slate-900",
-                pathname?.startsWith("/job") ? "text-slate-900 font-semibold" : "",
-              ].join(" ")}
+              className={["hover:text-slate-900", pathname?.startsWith("/candidate/job") ? "text-slate-900 font-semibold" : ""].join(" ")}
               onClick={() => {
                 setMenuOpen(false);
                 setNotiOpen(false);
               }}
             >
               Danh sách việc làm
+            </Link>
+          )}
+
+          {isCandidate && (
+            <Link
+              href="/candidate/dashboard"
+              className={["hover:text-slate-900", pathname?.startsWith("/candidate/dashboard") ? "text-slate-900 font-semibold" : ""].join(" ")}
+              onClick={() => {
+                setMenuOpen(false);
+                setNotiOpen(false);
+              }}
+            >
+              Đánh giá CV & Gợi ý việc làm
             </Link>
           )}
         </nav>
@@ -238,10 +301,7 @@ export default function Header() {
               <Link href="/auth/login" className="text-xs font-medium text-slate-700 hover:text-slate-900">
                 Đăng nhập
               </Link>
-              <Link
-                href="/auth/register"
-                className="rounded-full bg-slate-900 text-white text-xs font-medium px-3 py-1.5 hover:bg-slate-800"
-              >
+              <Link href="/auth/register" className="rounded-full bg-slate-900 text-white text-xs font-medium px-3 py-1.5 hover:bg-slate-800">
                 Bắt đầu ngay
               </Link>
             </>
@@ -295,11 +355,8 @@ export default function Header() {
                         notis.map((n) => (
                           <button
                             key={n.id}
-                            onClick={() => markReadAndGo(n)}
-                            className={[
-                              "w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-slate-50",
-                              !n.isRead ? "bg-slate-50/70" : "",
-                            ].join(" ")}
+                            onClick={() => void markReadAndGo(n)}
+                            className={["w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-slate-50", !n.isRead ? "bg-slate-50/70" : ""].join(" ")}
                           >
                             <div className="flex items-start gap-2">
                               {!n.isRead && <span className="mt-1.5 h-2 w-2 rounded-full bg-red-500" />}
@@ -337,7 +394,7 @@ export default function Header() {
                   className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs hover:border-slate-900"
                 >
                   <div className="h-6 w-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[11px]">
-                    {user.email[0].toUpperCase()}
+                    {user.email[0]?.toUpperCase() || "U"}
                   </div>
                   <div className="hidden sm:flex flex-col text-left">
                     <span className="text-xs font-medium text-slate-900">{user.email}</span>
@@ -355,7 +412,7 @@ export default function Header() {
                     <div className="py-1">
                       {user.role === "candidate" ? (
                         <Link
-                          href="/candidate/dashboard"
+                          href="/candidate/profile"
                           className="block px-3 py-2 hover:bg-slate-50"
                           onClick={() => setMenuOpen(false)}
                         >
@@ -371,10 +428,7 @@ export default function Header() {
                         </Link>
                       )}
 
-                      <button
-                        onClick={handleLogout}
-                        className="w-full text-left px-3 py-2 hover:bg-slate-50 text-red-600"
-                      >
+                      <button onClick={handleLogout} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-red-600">
                         Đăng xuất
                       </button>
                     </div>

@@ -24,5 +24,3 @@ io.on('connection', (socket) => {
 });
 // Gắn io vào app để sử dụng toàn cục
 app.set('io', io);
-
-server.listen(port);
