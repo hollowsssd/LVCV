@@ -111,7 +111,7 @@ class jobController {
             // - Và (title/description chứa bất kỳ token nào)
             const jobs = await Job.findAll({
                 where: {
-                    status: "OPEN", // chỉnh theo status thực tế của mày (OPEN/ACTIVE...)
+                    status: "OPEN", // (OPEN/ACTIVE...)
                     [Op.or]: orConds,
                     // Optional: chỉ lấy job còn hạn
                     // deadline: { [Op.gte]: new Date() },

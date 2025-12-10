@@ -1,22 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const applicationController = require('../app/controllers/applicationController');
+const auth = require('../app/middlewares/auth');
+const author = require('../app/middlewares/authorization');
 
+router.use(auth, author('CANDIDATE'));
 
-
-// Danh sách
 router.get('/', applicationController.index);
 
-// Chi tiết theo id
 router.get('/:id', applicationController.show);
 
-// Thêm mới
+// ứng tuyển job
 router.post('/', applicationController.create);
 
-// Cập nhật
 router.put('/:id', applicationController.update);
 
-// Xóa
 router.delete('/:id', applicationController.delete);
 
 

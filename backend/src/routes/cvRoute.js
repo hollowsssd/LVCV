@@ -6,6 +6,7 @@ const cvController = require("../app/controllers/cvController");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const auth = require("../app/middlewares/auth");
 
 const uploadDir = path.join(process.cwd(), "uploads", "cvs");
 fs.mkdirSync(uploadDir, { recursive: true });
@@ -46,7 +47,7 @@ const upload = multer({
 
 const safeUnlink = (p) => p && fs.unlink(p, () => { });
 
-// ===== magic bytes helpers =====
+// magic bytes helpers
 const readBytes = (filePath, n) => {
     const fd = fs.openSync(filePath, "r");
     try {
@@ -78,7 +79,7 @@ function isValidByExtAndMagic(filePath, originalname) {
     return false;
 }
 
-// ===== upload middleware =====
+// upload middleware
 const handleUpload = (required) => (req, res, next) => {
     upload.single("cv")(req, res, (err) => {
         if (err) {
@@ -109,7 +110,9 @@ const handleUpload = (required) => (req, res, next) => {
     });
 };
 
-// ===== Routes =====
+// Routes
+router.use(auth);
+
 router.post("/rate-cv", uploadRateCv.single("cvfile"), cvController.rateCV);
 router.get("/", cvController.index);
 router.get("/:id", cvController.show);

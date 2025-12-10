@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import Cookies from "js-cookie";
-import axios, { AxiosError } from "axios";
 import Toast from "@/app/components/Toast";
+import axios, { AxiosError } from "axios";
+import Cookies from "js-cookie";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type ToastState = { type: "success" | "error"; message: string } | null;
 type ApiErrorResponse = { message?: string };
@@ -67,8 +67,8 @@ function StatusPill({ status }: { status: JobStatus }) {
     status === "OPEN"
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
       : status === "CLOSED"
-      ? "border-rose-200 bg-rose-50 text-rose-700"
-      : "border-slate-200 bg-slate-50 text-slate-700";
+        ? "border-rose-200 bg-rose-50 text-rose-700"
+        : "border-slate-200 bg-slate-50 text-slate-700";
 
   const label =
     status === "OPEN" ? "Đang mở" : status === "CLOSED" ? "Đã đóng" : "Nháp";
@@ -481,7 +481,7 @@ export default function JobsPage() {
               placeholder="Tìm theo title / công ty / địa điểm..."
               className="w-full sm:w-72 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-900 focus:bg-white"
             />
-            
+
           </div>
         </div>
 
