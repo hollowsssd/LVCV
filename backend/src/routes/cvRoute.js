@@ -2,10 +2,13 @@
 const express = require("express");
 const router = express.Router();
 const cvController = require("../app/controllers/cvController");
+const auth =  require("../app/middlewares/auth");
+const requireCandidate =require("../app/middlewares/requireCandidate");
 
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const auth = require("../app/middlewares/auth");
 
 // cvRoute.js nằm ở: backend/src/routes
 // lên 3 cấp sẽ ra project root (ngang backend/frontend)
@@ -50,7 +53,7 @@ const upload = multer({
 
 const safeUnlink = (p) => p && fs.unlink(p, () => { });
 
-// ===== magic bytes helpers =====
+// magic bytes helpers
 const readBytes = (filePath, n) => {
     const fd = fs.openSync(filePath, "r");
     try {
@@ -82,7 +85,7 @@ function isValidByExtAndMagic(filePath, originalname) {
     return false;
 }
 
-// ===== upload middleware =====
+// upload middleware
 const handleUpload = (required) => (req, res, next) => {
     upload.single("cv")(req, res, (err) => {
         if (err) {
@@ -113,14 +116,20 @@ const handleUpload = (required) => (req, res, next) => {
     });
 };
 
-// ===== Routes =====
+router.post("/rate-cv",auth,requireCandidate, uploadRateCv.single("cvfile"), cvController.rateCV);
+
+// Routes
+router.use(auth);
+
 router.post("/rate-cv", uploadRateCv.single("cvfile"), cvController.rateCV);
 router.get("/", cvController.index);
+router.get("/mine", auth, requireCandidate, cvController.myList);
+
 router.get("/:id", cvController.show);
 
-router.post("/", handleUpload(true), cvController.create);
-router.put("/:id", handleUpload(false), cvController.update);
+router.post("/",auth,requireCandidate, handleUpload(true), cvController.create);
+router.put("/:id", auth,requireCandidate,handleUpload(false), cvController.update);
 
-router.delete("/:id", cvController.delete);
+router.delete("/:id", auth,requireCandidate,cvController.delete);
 
 module.exports = router;

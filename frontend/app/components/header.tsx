@@ -1,13 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
-import Cookies from "js-cookie";
-import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import Cookies from "js-cookie";
+import { Bell } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import axios, { AxiosError } from "axios";
 import { Bell } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
+import { useSocket } from "../hooks/useSocket";
 
 type User = {
   email: string;
@@ -24,9 +27,38 @@ type Noti = {
 };
 
 type UnreadCountRes = { count: number };
-type ListNotiRes = Noti[];
 
-const API_BASE = "http://localhost:8080";
+type ApiErr = { message?: string; error?: string; detail?: string };
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
+
+/* ================== helpers ================== */
+
+function cleanBearer(raw: string): string {
+  let t = String(raw || "").trim();
+  // xóa nhiều lần "Bearer " nếu bị dính "Bearer Bearer ..."
+  while (/^bearer\s+/i.test(t)) t = t.replace(/^bearer\s+/i, "").trim();
+  // nếu còn rác sau token -> lấy token đầu tiên
+  t = t.split(/\s+/)[0]?.trim() || "";
+  return t;
+}
+
+function isLikelyJwt(token: string): boolean {
+  // JWT thường có 2 dấu chấm
+  return token.split(".").length === 3;
+}
+
+function normalizeRole(role: string): User["role"] | "" {
+  const r = String(role || "").toLowerCase().trim();
+  if (r === "candidate") return "candidate";
+  if (r === "employer") return "employer";
+  return "";
+}
+
+function pickErr(e: unknown, fallback: string): string {
+  const err = e as AxiosError<ApiErr>;
+  return err.response?.data?.message || err.response?.data?.error || err.response?.data?.detail || err.message || fallback;
+}
 
 export default function Header() {
   const pathname = usePathname();
@@ -34,31 +66,62 @@ export default function Header() {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [notiOpen, setNotiOpen] = useState(false);
-  const [authTick, setAuthTick] = useState(0);
 
-  const [unreadCount, setUnreadCount] = useState(0);
+  const {
+    isConnected,                    // Trạng thái kết nối socket
+    notifications: socketNotis,     // Notifications nhận từ socket
+    unreadCount: socketUnread,      // Số chưa đọc từ socket
+    setUnreadCount: setSocketUnread,// Setter để sync với API
+    markAsRead: socketMarkAsRead,   // Hàm đánh dấu đã đọc
+  } = useSocket();
+
+  // State cho notifications (merge socket + API)
   const [notis, setNotis] = useState<Noti[]>([]);
   const [loadingNotis, setLoadingNotis] = useState(false);
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
-  const user = useMemo<User | null>(() => {
-    if (typeof window === "undefined") return null;
+  // đọc cookies mỗi lần route change (đủ dùng)
+  const auth = useMemo(() => {
+    if (typeof window === "undefined") {
+      return { token: "", user: null as User | null };
+    }
 
-    const token = Cookies.get("token");
-    const role = Cookies.get("role") as User["role"] | undefined;
-    const email = Cookies.get("email");
+    const tokenRaw = Cookies.get("token") || "";
+    const token = cleanBearer(tokenRaw);
 
-    if (token && role && email) return { email, role };
-    return null;
-  }, [pathname, authTick]);
+    const roleRaw = Cookies.get("role") || "";
+    const role = normalizeRole(roleRaw);
 
-  const token = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    return Cookies.get("token") || "";
-  }, [pathname, authTick]);
+    const email = (Cookies.get("email") || "").trim();
 
-  // click outside -> close dropdowns
+    // token không đúng dạng -> coi như chưa login
+    if (!token || !isLikelyJwt(token) || !role || !email) {
+      return { token: "", user: null as User | null };
+    }
+
+    return { token, user: { email, role } as User };
+  }, [pathname]);
+
+  const token = auth.token;
+  const user = auth.user;
+
+  // nếu cookie token đang lỗi 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const raw = Cookies.get("token") || "";
+    const cleaned = cleanBearer(raw);
+
+    // có raw mà cleaned không phải jwt => xóa để khỏi spam "jwt malformed"
+    if (raw && (!cleaned || !isLikelyJwt(cleaned))) {
+      Cookies.remove("token", { path: "/" });
+      Cookies.remove("role", { path: "/" });
+      Cookies.remove("email", { path: "/" });
+    }
+  }, [pathname]);
+
+  // Click outside -> close dropdowns
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
       if (!wrapRef.current) return;
@@ -71,28 +134,34 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", onMouseDown);
   }, []);
 
-  // poll unread count
+
+  // Chỉ fetch 1 lần khi mount để lấy count ban đầu
+  // Sau đó socket sẽ tự động update real-time
   useEffect(() => {
     if (!user || !token) {
-      setUnreadCount(0);
+      setSocketUnread(0);
       return;
     }
+
+    let alive = true;
 
     const fetchCount = async () => {
       try {
         const res = await axios.get<UnreadCountRes>(`${API_BASE}/api/notifications/unread-count`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setUnreadCount(Number(res.data?.count ?? 0));
+        setSocketUnread(Number(res.data?.count ?? 0));
       } catch {
         // ignore
       }
     };
-
+    // Fetch lần đầu
     fetchCount();
-    const intervalId: ReturnType<typeof setInterval> = setInterval(fetchCount, 12000);
+    // Không cần polling nữa vì có socket real-time
+    // Nhưng giữ lại polling 60s để đảm bảo sync (backup)
+    const intervalId = setInterval(fetchCount, 60000);
     return () => clearInterval(intervalId);
-  }, [user, token]);
+  }, [user, token, setSocketUnread]);
 
   const handleLogout = () => {
     Cookies.remove("token", { path: "/" });
@@ -101,7 +170,6 @@ export default function Header() {
 
     setMenuOpen(false);
     setNotiOpen(false);
-    setAuthTick((t) => t + 1);
 
     router.push("/");
     router.refresh();
@@ -113,43 +181,59 @@ export default function Header() {
     { href: "/#for-whom", label: "Đối tượng sử dụng" },
   ];
 
+  // FETCH NOTIFICATIONS  
   const fetchNotis = async () => {
     if (!user || !token) return;
     try {
       setLoadingNotis(true);
-      const res = await axios.get<ListNotiRes>(`${API_BASE}/api/notifications?limit=10`, {
+      const res = await axios.get(`${API_BASE}/api/notifications?limit=10`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setNotis(Array.isArray(res.data) ? res.data : []);
+
+      // Lấy data từ API (có thể là array hoặc object với key notifications)
+      const apiNotis = res.data?.notifications || res.data || [];
+
+      // MERGE SOCKET + API NOTIFICATIONS
+      // Socket có thể có notifications mới chưa có trong API response
+      // Merge và loại bỏ duplicate theo id
+      const socketIds = new Set(socketNotis.map(n => n.id));
+      const uniqueApiNotis = apiNotis.filter((n: Noti) => !socketIds.has(n.id));
+
+      // Socket notifications đầu tiên (mới nhất), sau đó là API
+      setNotis([...socketNotis, ...uniqueApiNotis]);
     } catch {
-      setNotis([]);
+      // Nếu API lỗi, vẫn hiện socket notifications
+      setNotis(socketNotis);
     } finally {
       setLoadingNotis(false);
     }
   };
 
-  const openNoti = async () => {
+  const openNoti = () => {
     if (!user || !token) return;
-
     setMenuOpen(false);
-
     setNotiOpen((prev) => {
       const next = !prev;
-      if (next) fetchNotis();
+      if (next) void fetchNotis();
       return next;
     });
   };
 
+  // ĐÁNH DẤU ĐÃ ĐỌC VÀ NAVIGATE
   const markReadAndGo = async (n: Noti) => {
     if (!user || !token) return;
 
     try {
       if (!n.isRead) {
-        await axios.patch(`${API_BASE}/api/notifications/${n.id}/read`, null, {
+        // Gọi API đánh dấu đã đọc
+        await axios.put(`${API_BASE}/api/notifications/${n.id}/read`, null, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        setUnreadCount((c) => Math.max(0, c - 1));
+        // Cập nhật socket state
+        socketMarkAsRead(n.id);
+
+        // Cập nhật local state
         setNotis((prev) => prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
       }
     } catch {
@@ -192,12 +276,26 @@ export default function Header() {
                 "hover:text-slate-900 dark:hover:text-white",
                 pathname?.startsWith("/job") ? "text-slate-900 font-semibold dark:text-slate-100" : "",
               ].join(" ")}
+              className={["hover:text-slate-900", pathname?.startsWith("/candidate/job") ? "text-slate-900 font-semibold" : ""].join(" ")}
               onClick={() => {
                 setMenuOpen(false);
                 setNotiOpen(false);
               }}
             >
               Danh sách việc làm
+            </Link>
+          )}
+
+          {isCandidate && (
+            <Link
+              href="/candidate/dashboard"
+              className={["hover:text-slate-900", pathname?.startsWith("/candidate/dashboard") ? "text-slate-900 font-semibold" : ""].join(" ")}
+              onClick={() => {
+                setMenuOpen(false);
+                setNotiOpen(false);
+              }}
+            >
+              Đánh giá CV & Gợi ý việc làm
             </Link>
           )}
         </nav>
@@ -210,8 +308,7 @@ export default function Header() {
                                                  dark:text-slate-200 dark:hover:text-white">
                 Đăng nhập
               </Link>
-              <Link
-                href="/auth/register"
+              <Link href="/auth/register"
                 className="rounded-full bg-slate-900 text-white text-xs font-medium px-3 py-1.5 hover:bg-slate-800
                            dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
               >
@@ -236,16 +333,35 @@ export default function Header() {
                   {unreadCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white
                                      dark:ring-slate-900" />
+                  <Bell size={18} className="text-slate-700" />
+
+                  {/* Badge hiển thị số chưa đọc (từ socket) */}
+                  {socketUnread > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 ring-2 ring-white flex items-center justify-center text-[10px] text-white font-bold">
+                      {socketUnread > 9 ? "9+" : socketUnread}
+                    </span>
+                  )}
+
+                  {/* Indicator xanh khi socket connected */}
+                  {isConnected && (
+                    <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 ring-1 ring-white" />
                   )}
                 </button>
 
+                {/* ========== NOTIFICATION DROPDOWN ========== */}
                 {notiOpen && (
-                  <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-slate-200 bg-white shadow-md overflow-hidden text-xs
-                                  dark:border-slate-800 dark:bg-slate-900">
-                    <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between
-                                    dark:border-slate-800">
-                      <p className="font-medium text-slate-900 dark:text-slate-100">Thông báo</p>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">{unreadCount} chưa đọc</span>
+                  <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-slate-200 bg-white shadow-md overflow-hidden text-xs">
+                    <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+                      <p className="font-medium text-slate-900">Thông báo</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-slate-500">{socketUnread} chưa đọc</span>
+                        {/* Hiển thị trạng thái socket */}
+                        {isConnected ? (
+                          <span className="text-[10px] text-green-600">● Live</span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400">○ Offline</span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="max-h-80 overflow-auto">

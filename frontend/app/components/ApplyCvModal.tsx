@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
 import Cookies from "js-cookie";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Job } from "../types";
 
 export default function ApplyCvModal({
@@ -77,7 +77,7 @@ export default function ApplyCvModal({
       setSubmitting(true);
 
       /**
-       * ✅ Demo UI: chưa call API thật.
+       * Demo UI: chưa call API thật.
        * Khi bạn có BE apply, bạn thay đoạn này bằng:
        *  - formData append jobId + file
        *  - axios.post(`${API_BASE}/api/applications`, formData, ...)

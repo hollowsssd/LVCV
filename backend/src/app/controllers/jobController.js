@@ -1,25 +1,57 @@
-const { Job } = require("../../../models");
+const { Job,Employer } = require("../../../models");
 const { Op } = require("sequelize");
 
 
-class jobController {
-    async index(req, res) {
-        try {
-            const jobs = await Job.findAll();
-            res.json(jobs);
-        } catch (error) {
-            res.status(500).json({ error: "Lỗi lấy danh sách job" });
-        }
-    }
+class jobController { 
+  async index(req, res) {
+    try {
+      const where = {};
+      if (req.query.status) where.status = req.query.status;
 
-    async show(req, res) {
-        try {
-            const job = await Job.findByPk(req.params.id);
-            if (!job) return res.status(404).json({ message: "Không tìm thấy job" });
-            res.json(job);
-        } catch (error) {
-            res.status(500).json({ error: "Lỗi lấy job" });
-        }
+      const jobs = await Job.findAll({
+        where,
+        include: [
+          {
+            model: Employer,
+            as: "Employer",          
+            attributes: ["companyName"],
+          },
+        ],
+        order: [["createdAt", "DESC"]],
+      });
+
+      const data = jobs.map((j) => {
+        const json = j.toJSON();
+        return {
+          ...json,
+          companyName: json.Employer?.companyName ?? null,
+        };
+      });
+
+      return res.json(data);
+    } catch (error) {
+      console.error("[jobController.index] error:", error);
+      return res.status(500).json({
+        message: "Lỗi lấy danh sách job",
+        detail: error.message,
+      });
+    }
+  }
+  async show(req, res) {
+    try {
+      const job = await Job.findByPk(req.params.id, {
+        include: [{ model: Employer, as: "Employer", attributes: ["companyName"] }],
+      });
+      if (!job) return res.status(404).json({ message: "Không tìm thấy job" });
+
+      const json = job.toJSON();
+      return res.json({ ...json, companyName: json.Employer?.companyName ?? null });
+    } catch (error) {
+      console.error("[jobController.show] error:", error);
+      return res.status(500).json({ message: "Lỗi lấy job", detail: error.message });
+    }
+  
+  
     }
     async showJobEmployer(req, res) {
         try {
@@ -114,7 +146,7 @@ class jobController {
             // - Và (title/description chứa bất kỳ token nào)
             const jobs = await Job.findAll({
                 where: {
-                    status: "OPEN", // chỉnh theo status thực tế của mày (OPEN/ACTIVE...)
+                    status: "OPEN", // (OPEN/ACTIVE...)
                     [Op.or]: orConds,
                     // Optional: chỉ lấy job còn hạn
                     // deadline: { [Op.gte]: new Date() },

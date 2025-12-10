@@ -8,7 +8,7 @@ const cvWorker = require("../services/cvWorker");
 const PROJECT_ROOT = path.resolve(__dirname, "../../../../");
 const UPLOADS_BASE = path.join(PROJECT_ROOT, "uploads");
 
-const safeUnlink = (p) => p && fs.unlink(p, () => { });
+const safeUnlink = (p) => p && fs.unlink(p, () => {});
 
 function removeLocalFileByUrl(fileUrl) {
   if (!fileUrl) return;
@@ -16,7 +16,7 @@ function removeLocalFileByUrl(fileUrl) {
   let pathname = fileUrl;
   try {
     pathname = new URL(fileUrl).pathname;
-  } catch (_) { }
+  } catch (_) {}
 
   // /uploads/cvs/xxx.pdf -> cvs/xxx.pdf
   const relative = pathname.replace(/^\/uploads\/?/, "");
@@ -29,20 +29,25 @@ function removeLocalFileByUrl(fileUrl) {
 }
 
 const toBool = (v) =>
-  typeof v === "boolean" ? v : typeof v === "string" ? v.toLowerCase() === "true" : undefined;
+  typeof v === "boolean"
+    ? v
+    : typeof v === "string"
+    ? v.toLowerCase() === "true"
+    : undefined;
 
-const toNum = (v) => (v === undefined || v === null || v === "" ? undefined : Number(v));
+const toNum = (v) =>
+  v === undefined || v === null || v === "" ? undefined : Number(v);
 
 function buildPayload(body, file) {
   const payload = {};
 
   if ("title" in body) payload.title = body.title ?? null;
-  if ("candidateId" in body) payload.candidateId = toNum(body.candidateId) ?? null;
+  // if ("candidateId" in body) payload.candidateId = toNum(body.candidateId) ?? null; // khong cho client tu set candidateID ,co tao midd require Candi r
 
   const isDefault = toBool(body.isDefault);
   if (isDefault !== undefined) payload.isDefault = isDefault;
 
-  if (body.score != null) payload.score = toNum(body.score);
+  // if (body.score != null) payload.score = toNum(body.score);// khong luu diem trong db
   if ("feedback" in body) payload.feedback = body.feedback ?? null;
 
   if (file) {
@@ -72,7 +77,21 @@ class cvController {
       return res.status(500).json({ error: "Lỗi lấy cv" });
     }
   }
+  async myList(req, res) {
+    try {
+      const cvs = await Cv.findAll({
+        where: { candidateId: req.candidate.id },
+        attributes: { exclude: ["score","feedback"] }, //de khong select vao sc va feed
+        order: [["createdAt", "DESC"]],
+      });
 
+      return res.json(cvs);
+    } catch (e) {
+      return res
+        .status(500)
+        .json({ message: "Lỗi lấy CV của bạn", detail: e.message });
+    }
+  }
   async create(req, res) {
     try {
       if (!req.file) {
@@ -80,6 +99,9 @@ class cvController {
       }
 
       const payload = buildPayload(req.body, req.file);
+
+      payload.candidateId = req.candidate.id;
+
       const cv = await Cv.create(payload);
       return res.status(201).json(cv);
     } catch (e) {
@@ -98,7 +120,7 @@ class cvController {
 
     const oldFileUrl = cv.fileUrl;
     const payload = buildPayload(req.body, req.file);
-
+    payload.candidateId = cv.candidateId;
     try {
       await cv.update(payload);
 
@@ -138,7 +160,9 @@ class cvController {
 
       return res.json(result);
     } catch (e) {
-      return res.status(500).json({ message: "Chấm CV lỗi", detail: e.message });
+      return res
+        .status(500)
+        .json({ message: "Chấm CV lỗi", detail: e.message });
     }
   }
 }
