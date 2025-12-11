@@ -175,10 +175,19 @@ export default function Header() {
     router.refresh();
   };
 
+  const [hash, setHash] = useState("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // load lần đầu (ví dụ user vào thẳng /#for-whom)
+    setHash(window.location.hash || "");
+  }, []);
+
+
   const menuItems = [
-    { href: "/#features", label: "Tính năng" },
-    { href: "/#how-it-works", label: "Cách hoạt động" },
-    { href: "/#for-whom", label: "Đối tượng sử dụng" },
+    { href: "/#features", hash: "#features", label: "Tính năng" },
+    { href: "/#how-it-works", hash: "#how-it-works", label: "Cách hoạt động" },
+    { href: "/#for-whom", hash: "#for-whom", label: "Đối tượng sử dụng" },
   ];
 
   // FETCH NOTIFICATIONS  
@@ -263,17 +272,34 @@ export default function Header() {
 
         {/* Nav */}
         <nav className="hidden md:flex items-center gap-6 text-xs text-slate-600 dark:text-slate-300">
-          {menuItems.map((item) => (
-            <a key={item.href} href={item.href} className="hover:text-slate-900 dark:hover:text-white">
-              {item.label}
-            </a>
-          ))}
+          {menuItems.map((item) => {
+            const isActive = pathname === "/" && hash === item.hash;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={[
+                  "hover:text-slate-900 dark:hover:text-white",
+                  isActive ? "text-slate-900 font-semibold dark:text-slate-100" : "",
+                ].join(" ")}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setNotiOpen(false);
+                  setHash(item.hash);
+                }}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
 
           {isCandidate && (
-            <Link href="/candidate/job"
+            <Link
+              href="/candidate/job"
               className={[
                 "hover:text-slate-900 dark:hover:text-white",
-                pathname?.startsWith("/job") ? "text-slate-900 font-semibold dark:text-slate-100" : "",
+                pathname?.startsWith("/candidate/job") ? "text-slate-900 font-semibold dark:text-slate-100" : "",
               ].join(" ")}
               onClick={() => {
                 setMenuOpen(false);
@@ -287,7 +313,10 @@ export default function Header() {
           {isCandidate && (
             <Link
               href="/candidate/dashboard"
-              className={["hover:text-slate-900", pathname?.startsWith("/candidate/dashboard") ? "text-slate-900 font-semibold" : ""].join(" ")}
+              className={[
+                "hover:text-slate-900 dark:hover:text-white",
+                pathname?.startsWith("/candidate/dashboard") ? "text-slate-900 font-semibold dark:text-slate-100" : "",
+              ].join(" ")}
               onClick={() => {
                 setMenuOpen(false);
                 setNotiOpen(false);
@@ -433,7 +462,7 @@ export default function Header() {
                     <div className="py-1">
                       {user.role === "candidate" ? (
                         <Link
-                          href="/candidate/dashboard"
+                          href="/candidate/profile"
                           className="block px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-200"
                           onClick={() => setMenuOpen(false)}
                         >

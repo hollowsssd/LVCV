@@ -39,11 +39,11 @@ html.theme-transition :is(
   p,span,a,li,label,
   small,strong,em,b,i
 ) {
-  transition: color 320ms ease;
+  transition: color 400ms ease;
 }
 
 html.theme-transition svg,
 html.theme-transition svg * {
-  transition: stroke 320ms ease, fill 320ms ease;
+  transition: stroke 400ms ease, fill 400ms ease;
 }
 

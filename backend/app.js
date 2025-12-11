@@ -27,7 +27,6 @@ const employerRouter = require('./src/routes/employerRoute');
 const jobRouter = require('./src/routes/jobRoute');
 const userRouter = require('./src/routes/userRoute');
 const auth = require('./src/routes/auth');
-const Cv = require('./src/routes/cvRoute');
 const notificationRouter = require('./src/routes/notificationRoute');
 
 
@@ -38,7 +37,6 @@ app.use('/api/employers', employerRouter);
 app.use('/api/jobs', jobRouter);
 app.use('/api/users', userRouter);
 app.use('/api/auth', auth);
-app.use('/api/cv', Cv);
 app.use('/api/notifications', notificationRouter);
 
 console.log("Hello Worlds!");
