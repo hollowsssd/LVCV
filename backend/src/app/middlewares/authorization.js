@@ -1,3 +1,5 @@
+const jwt = require("jsonwebtoken");
+const { user } = require("../../../models");
 function authorization(roles) {
   return (req, res, next) => {
     if (!req.user) return res.status(401).json({ message: "Chưa đăng nhập" });
@@ -14,5 +16,29 @@ function authorization(roles) {
     next();
   };
 }
+async function guestOnly(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
 
-module.exports = authorization;
+    if (!token) {
+      return next();
+    }
+
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findByPk(payload.id);
+
+    if (user) {
+      return res.status(400).json({ message: "Bạn đã đăng nhập rồi" });
+    }
+
+    return next();
+  } catch (err) {
+    return next();
+  }
+}
+
+module.exports = {
+  authorization,
+  guestOnly,
+};

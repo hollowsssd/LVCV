@@ -3,7 +3,7 @@ const router = express.Router();
 
 const auth = require("../app/middlewares/auth");
 const userController = require("../app/controllers/userController");
-const authorization = require("../app/middlewares/authorization");
+const { authorization } = require("../app/middlewares/authorization");
 const ratelimit = require("../app/middlewares/rateLimit");
 
 

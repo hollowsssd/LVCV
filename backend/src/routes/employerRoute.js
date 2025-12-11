@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const employerController = require("../app/controllers/employerController");
 const auth = require("../app/middlewares/auth");
-const authorization = require("../app/middlewares/authorization");
+const { authorization } = require("../app/middlewares/authorization");
 
 router.get("/", auth, authorization("EMPLOYER"), employerController.index);
 

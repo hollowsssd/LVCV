@@ -41,6 +41,10 @@ function normalizeRole(input: string): Role {
   return "candidate";
 }
 
+function isLikelyJwt(token: string): boolean {
+  return token.split(".").length === 3;
+}
+
 export default function LoginPage() {
   const router = useRouter();
 
@@ -51,6 +55,25 @@ export default function LoginPage() {
   const [toast, setToast] = useState<ToastState>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const token = Cookies.get("token") ?? "";
+    const roleCookie = Cookies.get("role") ?? "";
+
+    if (!token || !isLikelyJwt(token)) return;
+
+    const role = normalizeRole(roleCookie);
+
+    let redirectPath = "";
+    if (role === "candidate") redirectPath = "/candidate/dashboard";
+    else if (role === "employer") redirectPath = "/employer/dashboard";
+    else if (role === "admin") redirectPath = "/admin/dashboard";
+
+    if (redirectPath) {
+      router.replace(redirectPath);
+    }
+  }, [router]);
+
+  // timeout ẩn toast
   useEffect(() => {
     if (!toast) return;
     const t = window.setTimeout(() => setToast(null), 1000);
@@ -112,7 +135,9 @@ export default function LoginPage() {
       }, 1000);
     } catch (error) {
       const err = error as AxiosError<ApiErrorResponse>;
-      const msg = err.response?.data?.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.";
+      const msg =
+        err.response?.data?.message ||
+        "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.";
       setToast({ type: "error", message: msg });
     } finally {
       setLoading(false);
@@ -121,13 +146,21 @@ export default function LoginPage() {
 
   return (
     <>
-      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
 
       <div className="min-h-[70vh] flex items-center justify-center">
         <div className="w-full max-w-md space-y-6">
           <div className="space-y-2 text-center">
             <h1 className="text-2xl font-semibold text-slate-900">Đăng nhập</h1>
-            <p className="text-sm text-slate-500">Truy cập hệ thống phân tích CV & gợi ý việc làm.</p>
+            <p className="text-sm text-slate-500">
+              Truy cập hệ thống phân tích CV & gợi ý việc làm.
+            </p>
           </div>
 
           <form

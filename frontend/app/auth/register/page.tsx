@@ -8,13 +8,14 @@ import Cookies from "js-cookie";
 import Toast from "@/app/components/Toast";
 import { Eye, EyeOff } from "lucide-react";
 
+
 type ToastState = { type: "success" | "error"; message: string } | null;
 type Role = "candidate" | "employer";
 type ApiErrorResponse = { message?: string; error?: string };
 
 type AuthRegisterResponse = {
   message?: string;
-  user: { id: number; email: string; role: string }; // backend có thể trả "CANDIDATE" | "EMPLOYER"
+  user: { id: number; email: string; role: string };
   profile: unknown;
   token: string;
 };
@@ -38,6 +39,7 @@ type EmployerBody = {
   location: string;
 };
 
+
 const API_AUTH = "http://localhost:8080/api/auth";
 
 function isEmail(v: string) {
@@ -45,19 +47,40 @@ function isEmail(v: string) {
 }
 
 function normalizeRole(r: string): Role | "" {
-  const x = String(r || "").toLowerCase(); // ✅ "CANDIDATE" -> "candidate"
+  const x = String(r || "").toLowerCase();
   if (x === "candidate") return "candidate";
   if (x === "employer") return "employer";
   return "";
+}
+
+function isLikelyJwt(token: string): boolean {
+  // JWT chuẩn sẽ có 3 phần ngăn bởi 2 dấu chấm
+  return token.split(".").length === 3;
 }
 
 function pickErrorMessage(err: AxiosError<ApiErrorResponse>, fallback: string) {
   return err.response?.data?.message || err.response?.data?.error || fallback;
 }
 
+
 export default function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const token = Cookies.get("token") ?? "";
+    const roleCookie = Cookies.get("role") ?? "";
+
+    if (!token || !isLikelyJwt(token)) return;
+
+    const role = normalizeRole(roleCookie);
+    if (!role) return;
+
+    const redirectPath =
+      role === "candidate" ? "/candidate/dashboard" : "/employer/dashboard";
+
+    router.replace(redirectPath);
+  }, [router]);
 
   const roleFromQuery = useMemo<Role | "">(() => {
     const q = searchParams.get("role");
@@ -96,7 +119,7 @@ export default function RegisterPage() {
   const [toast, setToast] = useState<ToastState>(null);
   const [loading, setLoading] = useState(false);
 
-  // toast auto close 1s
+  // toast auto close
   useEffect(() => {
     if (!toast) return;
     const t = window.setTimeout(() => setToast(null), 1000);
@@ -219,14 +242,19 @@ export default function RegisterPage() {
 
       setToast({ type: "success", message: "Đăng ký thành công!" });
 
-      const nextPath = normalizedRole === "candidate" ? "/candidate/dashboard" : "/employer/dashboard";
+      const nextPath =
+        normalizedRole === "candidate" ? "/candidate/dashboard" : "/employer/dashboard";
+
       window.setTimeout(() => {
         router.push(nextPath);
         router.refresh();
       }, 1000);
     } catch (error) {
       const err = error as AxiosError<ApiErrorResponse>;
-      setToast({ type: "error", message: pickErrorMessage(err, "Không thể đăng ký. Vui lòng thử lại.") });
+      setToast({
+        type: "error",
+        message: pickErrorMessage(err, "Không thể đăng ký. Vui lòng thử lại."),
+      });
     } finally {
       setLoading(false);
     }

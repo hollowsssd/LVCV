@@ -2,18 +2,14 @@
 const express = require("express");
 const router = express.Router();
 const cvController = require("../app/controllers/cvController");
-const auth = require("../app/middlewares/auth");
-const requireCandidate = require("../app/middlewares/requireCandidate");
+const auth =  require("../app/middlewares/auth");
+const requireCandidate =require("../app/middlewares/requireCandidate");
 
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const author = require('../app/middlewares/authorization');
 
-
-const PROJECT_ROOT = path.resolve(__dirname, "../../../");
-const uploadDir = path.join(PROJECT_ROOT, "uploads", "cvs");
-
+const uploadDir = path.join(process.cwd(), "uploads", "cvs");
 fs.mkdirSync(uploadDir, { recursive: true });
 const allowedExt = new Set([".pdf", ".doc", ".docx"]);
 
@@ -52,7 +48,7 @@ const upload = multer({
 
 const safeUnlink = (p) => p && fs.unlink(p, () => { });
 
-// magic bytes helpers
+// ===== magic bytes helpers =====
 const readBytes = (filePath, n) => {
     const fd = fs.openSync(filePath, "r");
     try {
@@ -84,7 +80,7 @@ function isValidByExtAndMagic(filePath, originalname) {
     return false;
 }
 
-// upload middleware
+// ===== upload middleware =====
 const handleUpload = (required) => (req, res, next) => {
     upload.single("cv")(req, res, (err) => {
         if (err) {
@@ -115,22 +111,16 @@ const handleUpload = (required) => (req, res, next) => {
     });
 };
 
-
-// Routes
-
-router.use(auth, author('CANDIDATE'));
-
-router.post("/rate-cv", requireCandidate, uploadRateCv.single("cvfile"), cvController.rateCV);
-
+// ===== Routes =====
+router.post("/rate-cv",auth,requireCandidate, uploadRateCv.single("cvfile"), cvController.rateCV);
 router.get("/", cvController.index);
-
-router.get("/mine", requireCandidate, cvController.myList);
+router.get("/mine", auth, requireCandidate, cvController.myList);
 
 router.get("/:id", cvController.show);
 
-router.post("/", requireCandidate, handleUpload(true), cvController.create);
-router.put("/:id", requireCandidate, handleUpload(false), cvController.update);
+router.post("/",auth,requireCandidate, handleUpload(true), cvController.create);
+router.put("/:id", auth,requireCandidate,handleUpload(false), cvController.update);
 
-router.delete("/:id", requireCandidate, cvController.delete);
+router.delete("/:id", auth,requireCandidate,cvController.delete);
 
 module.exports = router;

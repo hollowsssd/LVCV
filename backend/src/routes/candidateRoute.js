@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const candidateController = require("../app/controllers/candidateController");
 const auth = require("../app/middlewares/auth");
-const authorization = require("../app/middlewares/authorization");
+const { authorization } = require("../app/middlewares/authorization");
 
 router.get("/me", auth, authorization("CANDIDATE"), candidateController.me);
 

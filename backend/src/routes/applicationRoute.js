@@ -2,9 +2,9 @@ const express = require('express');
 const router = express.Router();
 const applicationController = require('../app/controllers/applicationController');
 const auth = require('../app/middlewares/auth');
-const author = require('../app/middlewares/authorization');
+const { authorization } = require("../app/middlewares/authorization");
 
-router.use(auth, author('CANDIDATE'));
+router.use(auth, authorization('CANDIDATE'));
 
 router.get('/', applicationController.index);
 

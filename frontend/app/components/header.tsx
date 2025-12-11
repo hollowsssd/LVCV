@@ -433,7 +433,7 @@ export default function Header() {
                     <div className="py-1">
                       {user.role === "candidate" ? (
                         <Link
-                          href="/candidate/dashboard"
+                          href="/candidate/profile"
                           className="block px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-200"
                           onClick={() => setMenuOpen(false)}
                         >

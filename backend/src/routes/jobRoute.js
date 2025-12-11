@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const jobController = require("../app/controllers/jobController");
-const authorization = require("../app/middlewares/authorization")
+const { authorization } = require("../app/middlewares/authorization");
 const auth = require("../app/middlewares/auth");
 const requireEmployer = require("../app/middlewares/requireEmployer");
 
