@@ -9,6 +9,8 @@ const ratelimit = require("../app/middlewares/rateLimit");
 
 router.get("/", auth, authorization("ADMIN"), userController.index);
 
+router.get("/profile", auth, userController.profile);
+
 router.get("/:id", userController.show);
 
 router.post("/", auth, authorization("ADMIN"), ratelimit, userController.create);

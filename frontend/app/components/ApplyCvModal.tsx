@@ -75,13 +75,6 @@ export default function ApplyCvModal({
 
     try {
       setSubmitting(true);
-
-      /**
-       * Demo UI: chưa call API thật.
-       * Khi bạn có BE apply, bạn thay đoạn này bằng:
-       *  - formData append jobId + file
-       *  - axios.post(`${API_BASE}/api/applications`, formData, ...)
-       */
       await new Promise((r) => setTimeout(r, 500));
       onSubmitted();
     } catch {

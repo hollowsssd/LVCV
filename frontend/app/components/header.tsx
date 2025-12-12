@@ -6,7 +6,7 @@ import { Bell } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSocket } from "../hooks/useSocket";
 import ThemeToggle from "./ThemeToggle";
 
@@ -79,14 +79,12 @@ export default function Header() {
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
-  // State cho auth - khởi tạo null để tránh hydration mismatch
-  const [auth, setAuth] = useState<{ token: string; user: User | null }>({
-    token: "",
-    user: null,
-  });
+  // đọc cookies mỗi lần route change (đủ dùng)
+  const auth = useMemo(() => {
+    if (typeof window === "undefined") {
+      return { token: "", user: null as User | null };
+    }
 
-  // Đọc cookies trong useEffect để đảm bảo chỉ chạy trên client
-  useEffect(() => {
     const tokenRaw = Cookies.get("token") || "";
     const token = cleanBearer(tokenRaw);
 
@@ -95,12 +93,12 @@ export default function Header() {
 
     const email = (Cookies.get("email") || "").trim();
 
-    // token không đúng dạng 
+    // token không đúng dạng -> coi như chưa login
     if (!token || !isLikelyJwt(token) || !role || !email) {
-      setAuth({ token: "", user: null });
-    } else {
-      setAuth({ token, user: { email, role } as User });
+      return { token: "", user: null as User | null };
     }
+
+    return { token, user: { email, role } as User };
   }, [pathname]);
 
   const token = auth.token;
@@ -360,7 +358,7 @@ export default function Header() {
 
                   {/* Badge hiển thị số chưa đọc (từ socket) */}
                   {socketUnread > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 ring-2 ring-white flex items-center justify-center text-[10px] text-white font-bold dark:ring-slate-900">
+                    <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 ring-2 ring-white flex items-center justify-center text-[10px] text-white font-bold">
                       {socketUnread > 9 ? "9+" : socketUnread}
                     </span>
                   )}

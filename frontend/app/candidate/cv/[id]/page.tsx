@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import Cookies from "js-cookie";
-import axios, { AxiosError } from "axios";
 import type { CvEvaluateReport } from "@/app/candidate/cv/types";
+import axios, { AxiosError } from "axios";
+import Cookies from "js-cookie";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";

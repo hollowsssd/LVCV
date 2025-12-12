@@ -8,7 +8,7 @@ const cvWorker = require("../services/cvWorker");
 const PROJECT_ROOT = path.resolve(__dirname, "../../../../");
 const UPLOADS_BASE = path.join(PROJECT_ROOT, "uploads");
 
-const safeUnlink = (p) => p && fs.unlink(p, () => {});
+const safeUnlink = (p) => p && fs.unlink(p, () => { });
 
 function removeLocalFileByUrl(fileUrl) {
   if (!fileUrl) return;
@@ -16,7 +16,7 @@ function removeLocalFileByUrl(fileUrl) {
   let pathname = fileUrl;
   try {
     pathname = new URL(fileUrl).pathname;
-  } catch (_) {}
+  } catch (_) { }
 
   // /uploads/cvs/xxx.pdf -> cvs/xxx.pdf
   const relative = pathname.replace(/^\/uploads\/?/, "");
@@ -32,8 +32,8 @@ const toBool = (v) =>
   typeof v === "boolean"
     ? v
     : typeof v === "string"
-    ? v.toLowerCase() === "true"
-    : undefined;
+      ? v.toLowerCase() === "true"
+      : undefined;
 
 const toNum = (v) =>
   v === undefined || v === null || v === "" ? undefined : Number(v);
@@ -77,14 +77,14 @@ class cvController {
       return res.status(500).json({ error: "Lỗi lấy cv" });
     }
   }
+
   async myList(req, res) {
     try {
       const cvs = await Cv.findAll({
         where: { candidateId: req.candidate.id },
-        attributes: { exclude: ["score","feedback"] }, //de khong select vao sc va feed
+        attributes: { exclude: ["score", "feedback"] }, //de khong select vao sc va feed
         order: [["createdAt", "DESC"]],
       });
-
       return res.json(cvs);
     } catch (e) {
       return res
@@ -92,6 +92,8 @@ class cvController {
         .json({ message: "Lỗi lấy CV của bạn", detail: e.message });
     }
   }
+  
+
   async create(req, res) {
     try {
       if (!req.file) {
@@ -124,7 +126,7 @@ class cvController {
     try {
       await cv.update(payload);
 
-      // chỉ xoá file cũ sau khi update OK
+      // chỉ xoá file cũ sau khi update
       if (req.file) removeLocalFileByUrl(oldFileUrl);
 
       return res.json(cv);

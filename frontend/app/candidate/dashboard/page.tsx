@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import Cookies from "js-cookie";
-import axios, { AxiosError } from "axios";
-import Toast from "@/app/components/Toast";
 import type { CvEvaluateReport, RateCvApiRes } from "@/app/candidate/cv/types";
 import { normalizeRateCv } from "@/app/candidate/cv/types";
+import Toast from "@/app/components/Toast";
+import axios, { AxiosError } from "axios";
+import Cookies from "js-cookie";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 /* ===================== Types ===================== */
 
@@ -189,6 +189,8 @@ function UploadEvaluateModal(props: {
   onClose: () => void;
   token: string;
   onEvaluated: (pending: PendingEvaluation) => void;
+
+  //  keys scope theo user để không dính dữ liệu
   draftMetaKey: string;
   fileBlobKey: string;
 }) {
@@ -261,6 +263,7 @@ function UploadEvaluateModal(props: {
         evaluatedAtIso: new Date().toISOString(),
       };
 
+      //persist draft meta
       const meta: DraftMeta = {
         jobTitleInput: pending.jobTitleInput,
         evaluatedAtIso: pending.evaluatedAtIso,
@@ -275,6 +278,7 @@ function UploadEvaluateModal(props: {
         // ignore
       }
 
+      // persist file blob (IndexedDB)
       try {
         await idbSetBlob(fileBlobKey, pending.file);
       } catch {

@@ -1,12 +1,12 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import Toast from "@/app/components/Toast";
 import axios, { AxiosError } from "axios";
 import Cookies from "js-cookie";
-import Toast from "@/app/components/Toast";
 import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type ToastState = { type: "success" | "error"; message: string } | null;
 type Role = "candidate" | "employer";
@@ -45,7 +45,7 @@ function isEmail(v: string) {
 }
 
 function normalizeRole(r: string): Role | "" {
-  const x = String(r || "").toLowerCase();
+  const x = String(r || "").toLowerCase(); // "CANDIDATE" -> "candidate"
   if (x === "candidate") return "candidate";
   if (x === "employer") return "employer";
   return "";

@@ -1,3 +1,4 @@
+const { where } = require('sequelize');
 const { User } = require('../../../models');
 
 class userController {
@@ -19,6 +20,16 @@ class userController {
             res.json(user);
         } catch (error) {
             res.status(500).json({ error: 'Lỗi lấy user' });
+        }
+    }
+    //get profile
+    async profile(req, res) {
+        try {
+            const profile = await User.findByPk(req.user.id);
+            if (!profile) return res.status(404).json({ message: 'profile not found' });
+            res.json(profile);
+        } catch (error) {
+            res.status(500).json({ error: 'Lỗi lấy profile' });
         }
     }
 
