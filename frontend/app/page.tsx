@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import Cookies from "js-cookie";
+import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 
 type Role = "candidate" | "employer";

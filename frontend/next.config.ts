@@ -1,5 +1,5 @@
 // next.config.ts
-import type { NextConfig } from 'next';
+import type { NextConfig } from '@/node_modules/next';
 
 const nextConfig: NextConfig = {
   images: {

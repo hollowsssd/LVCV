@@ -1,49 +1,51 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getProfile } from "./app/utils/utils";
 
-// Named export "proxy" (Next docs hỗ trợ named hoặc default)
-export function proxy(req: NextRequest) {
-  const token = req.cookies.get("token")?.value;
-  const role = (req.cookies.get("role")?.value || "").toLowerCase();
-  const { pathname } = req.nextUrl;
+export async function proxy(request: NextRequest) {
+  const token = request.cookies.get("token")?.value;
+  const { pathname } = request.nextUrl;
 
-  // Chưa login mà vào khu vực protected
-  if (
-    (pathname.startsWith("/candidate") ||
-      pathname.startsWith("/employer") ||
-      pathname.startsWith("/admin")) &&
-    !token
-  ) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/auth/login";
-    return NextResponse.redirect(url);
+  // kt token khi ở login và register
+  if (pathname.startsWith("/auth/login") || pathname.startsWith("/auth/register")) {
+    if (token) {
+      const response = await getProfile(token);
+      if (response?.role === "CANDIDATE") {
+        return NextResponse.redirect(new URL("/candidate/dashboard", request.url));
+      }
+      if (response?.role === "EMPLOYER") {
+        return NextResponse.redirect(new URL("/employer/dashboard", request.url));
+      }
+      if (response?.role === "ADMIN") {
+        return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+      }
+    }
+    return NextResponse.next();
   }
 
-  // Candidate: chỉ candidate
-  if (pathname.startsWith("/candidate") && role !== "candidate") {
-    const url = req.nextUrl.clone();
-    url.pathname = "/";
-    return NextResponse.redirect(url);
-  }
-
-  // Employer: employer + admin
-  if (pathname.startsWith("/employer") && role !== "employer" && role !== "admin") {
-    const url = req.nextUrl.clone();
-    url.pathname = "/";
-    return NextResponse.redirect(url);
-  }
-
-  // Admin: chỉ admin
-  if (pathname.startsWith("/admin") && role !== "admin") {
-    const url = req.nextUrl.clone();
-    url.pathname = "/";
-    return NextResponse.redirect(url);
+  // kt token khi ở admin, candidate, employer
+  if (pathname.startsWith("/admin") || pathname.startsWith("/candidate") || pathname.startsWith("/employer")) {
+    if (!token) {
+      return NextResponse.redirect(new URL("/auth/login", request.url));
+    }
+    const response = await getProfile(token);
+    if (!response || !response.role) {
+      return NextResponse.redirect(new URL("/auth/login", request.url));
+    }
+    if (pathname.startsWith("/candidate") && response.role !== "CANDIDATE") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    if (pathname.startsWith("/employer") && response.role !== "EMPLOYER") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    if (pathname.startsWith("/admin") && response.role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
   }
 
   return NextResponse.next();
 }
 
-// matcher vẫn dùng như cũ
+// match
 export const config = {
-  matcher: ["/candidate/:path*", "/employer/:path*", "/admin/:path*"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)"],
 };

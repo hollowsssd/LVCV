@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import Cookies from "js-cookie";
-import axios, { AxiosError } from "axios";
-import Toast from "@/app/components/Toast";
 import type { CvEvaluateReport, RateCvApiRes } from "@/app/candidate/cv/types";
 import { normalizeRateCv } from "@/app/candidate/cv/types";
+import Toast from "@/app/components/Toast";
+import axios, { AxiosError } from "axios";
+import Cookies from "js-cookie";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 /* ===================== Types ===================== */
 
@@ -188,7 +188,7 @@ function UploadEvaluateModal(props: {
   token: string;
   onEvaluated: (pending: PendingEvaluation) => void;
 
-  // ✅ keys scope theo user để không dính dữ liệu
+  //  keys scope theo user để không dính dữ liệu
   draftMetaKey: string;
   fileBlobKey: string;
 }) {
@@ -252,7 +252,7 @@ function UploadEvaluateModal(props: {
         evaluatedAtIso: new Date().toISOString(),
       };
 
-      // ✅ persist draft meta
+      //persist draft meta
       const meta: DraftMeta = {
         jobTitleInput: pending.jobTitleInput,
         evaluatedAtIso: pending.evaluatedAtIso,
@@ -267,7 +267,7 @@ function UploadEvaluateModal(props: {
         // ignore
       }
 
-      // ✅ persist file blob (IndexedDB)
+      // persist file blob (IndexedDB)
       try {
         await idbSetBlob(fileBlobKey, pending.file);
       } catch {
@@ -390,7 +390,7 @@ export default function CandidateDashboard() {
   const role = useMemo(() => (Cookies.get("role") || "").toLowerCase(), []);
   const owner = useMemo(() => (Cookies.get("email") || "unknown").toLowerCase().trim(), []);
 
-  // ✅ keys scoped theo user (fix dính dữ liệu)
+  //  keys scoped theo user (fix dính dữ liệu)
   const draftMetaKey = useMemo(() => `${DRAFT_META_KEY}:${owner}`, [owner]);
   const fileBlobKey = useMemo(() => `${FILE_BLOB_KEY}:${owner}`, [owner]);
   const savedInfoKey = useMemo(() => `${SAVED_INFO_KEY}:${owner}`, [owner]);
@@ -402,7 +402,7 @@ export default function CandidateDashboard() {
   const [saving, setSaving] = useState(false);
   const [loadingJobId, setLoadingJobId] = useState<number | null>(null);
 
-  // ✅ cleanup legacy keys (tránh dính từ version cũ)
+  //  cleanup legacy keys (tránh dính từ version cũ)
   useEffect(() => {
     try {
       sessionStorage.removeItem("cv_report_draft");
@@ -412,7 +412,7 @@ export default function CandidateDashboard() {
     }
   }, []);
 
-  // ✅ restore saved info + draft theo đúng user
+  //  restore saved info + draft theo đúng user
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -491,14 +491,14 @@ export default function CandidateDashboard() {
 
       setCvSaved(saved);
 
-      // ✅ persist saved info theo user
+      // persist saved info theo user
       try {
         sessionStorage.setItem(savedInfoKey, JSON.stringify(saved));
       } catch {
         // ignore
       }
 
-      // ✅ clear draft theo user (vì bạn muốn lưu xong reset đánh giá)
+      // clear draft theo user (vì bạn muốn lưu xong reset đánh giá)
       try {
         sessionStorage.removeItem(draftMetaKey);
       } catch {

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import Cookies from "js-cookie";
 import axios, { AxiosError } from "axios";
+import Cookies from "js-cookie";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 type Role = "candidate" | "employer" | "admin";
 
@@ -114,19 +114,6 @@ export default function CandidateProfilePage() {
     let mounted = true;
 
     const run = async () => {
-      if (!token) {
-        if (!mounted) return;
-        setErrProfile("Bạn chưa đăng nhập. Vui lòng đăng nhập Candidate.");
-        setLoading(false);
-        return;
-      }
-      if (role && role !== "candidate") {
-        if (!mounted) return;
-        setErrProfile("Trang này chỉ dành cho tài khoản Candidate.");
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
         setErrProfile("");
@@ -154,14 +141,14 @@ export default function CandidateProfilePage() {
           const meRes = await axios.get<CandidateMe>(`${API_BASE}/api/candidates/me`, { headers });
           if (mounted) setCandidate(meRes.data ?? null);
         } catch (e1) {
-          if (mounted) setErrProfile(pickErr(e1, "Không load được hồ sơ (GET /api/candidates/me)."));
+          if (mounted) setErrProfile(pickErr(e1, "Không load được hồ sơ ."));
         }
 
         try {
           const cvsRes = await axios.get<CvItem[]>(`${API_BASE}/api/cvs/mine`, { headers });
           if (mounted) setCvs(Array.isArray(cvsRes.data) ? cvsRes.data : []);
         } catch (e2) {
-          if (mounted) setErrCvs(pickErr(e2, "Không load được CV (GET /api/cvs/mine)."));
+          if (mounted) setErrCvs(pickErr(e2, "Không load được CV."));
         }
       } finally {
         if (!mounted) return;
@@ -235,7 +222,7 @@ export default function CandidateProfilePage() {
       <section className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-900">Thông tin ứng viên</h2>
-          
+
         </div>
 
         {!candidate ? (
@@ -314,8 +301,8 @@ export default function CandidateProfilePage() {
                       Loại: <span className="font-medium">{fileType}</span>
                       {" · "}
                       Tạo: {created}
-                   
-                  </p>
+
+                    </p>
                   </div>
 
                   <div className="flex items-center gap-2">
