@@ -79,28 +79,40 @@ function pickErr(err: unknown, fallback: string): string {
 
 function Badge({ children }: { children: string }) {
   return (
-    <span className="inline-flex rounded-full bg-slate-900 text-white text-[10px] px-2 py-0.5">
+    <span
+      className="inline-flex rounded-full bg-slate-900 text-white text-[10px] px-2 py-0.5
+                 dark:bg-slate-100 dark:text-slate-900"
+    >
       {children}
     </span>
   );
 }
 
 function InlineAlert(props: { type: "warn" | "error"; message: string }) {
+  const base = "rounded-2xl border px-4 py-3 text-sm";
   const cls =
     props.type === "error"
-      ? "border-rose-200 bg-rose-50 text-rose-900"
-      : "border-amber-200 bg-amber-50 text-amber-900";
+      ? "border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-100"
+      : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100";
+
   return (
-    <div className={cn("rounded-2xl border px-4 py-3 text-sm", cls)}>
-      <p className="font-semibold">{props.type === "error" ? "⚠️ Lỗi" : "⚠️ Cảnh báo"}</p>
-      <p className="mt-1 text-[13px] leading-relaxed whitespace-pre-line">{props.message}</p>
+    <div className={cn(base, cls)}>
+      <p className="font-semibold">
+        {props.type === "error" ? "⚠️ Lỗi" : "⚠️ Cảnh báo"}
+      </p>
+      <p className="mt-1 text-[13px] leading-relaxed whitespace-pre-line">
+        {props.message}
+      </p>
     </div>
   );
 }
 
 export default function CandidateProfilePage() {
   const token = useMemo(() => Cookies.get("token") || "", []);
-  const role = useMemo(() => (Cookies.get("role") || "").toLowerCase() as Role, []);
+  const role = useMemo(
+    () => (Cookies.get("role") || "").toLowerCase() as Role,
+    []
+  );
   const email = useMemo(() => Cookies.get("email") || "", []);
 
   const [loading, setLoading] = useState(true);
@@ -121,7 +133,6 @@ export default function CandidateProfilePage() {
 
         const headers = { Authorization: `Bearer ${token}` };
 
-        // chạy song song
         const [meRes, cvsRes] = await Promise.all([
           axios.get<CandidateMe>(`${API_BASE}/api/candidates/me`, { headers }),
           axios.get<CvItem[]>(`${API_BASE}/api/cvs/mine`, { headers }),
@@ -134,18 +145,21 @@ export default function CandidateProfilePage() {
       } catch (err) {
         if (!mounted) return;
 
-        // tách lỗi: nếu /me fail thì profile lỗi; nếu /mine fail thì cvs lỗi
-        // Nhưng Promise.all fail là fail chung, nên thử gọi lại từng cái để biết cái nào chết
         const headers = { Authorization: `Bearer ${token}` };
+
         try {
-          const meRes = await axios.get<CandidateMe>(`${API_BASE}/api/candidates/me`, { headers });
+          const meRes = await axios.get<CandidateMe>(`${API_BASE}/api/candidates/me`, {
+            headers,
+          });
           if (mounted) setCandidate(meRes.data ?? null);
         } catch (e1) {
           if (mounted) setErrProfile(pickErr(e1, "Không load được hồ sơ ."));
         }
 
         try {
-          const cvsRes = await axios.get<CvItem[]>(`${API_BASE}/api/cvs/mine`, { headers });
+          const cvsRes = await axios.get<CvItem[]>(`${API_BASE}/api/cvs/mine`, {
+            headers,
+          });
           if (mounted) setCvs(Array.isArray(cvsRes.data) ? cvsRes.data : []);
         } catch (e2) {
           if (mounted) setErrCvs(pickErr(e2, "Không load được CV."));
@@ -165,10 +179,20 @@ export default function CandidateProfilePage() {
   // chặn truy cập
   if (!token || (role && role !== "candidate")) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm space-y-2">
-        <p className="text-sm font-semibold text-slate-900">Không thể truy cập</p>
-        <p className="text-sm text-slate-600">{errProfile || "Bạn không có quyền."}</p>
-        <Link href="/auth/login" className="inline-flex text-sm font-medium text-slate-900 hover:underline">
+      <div
+        className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm space-y-2
+                   dark:border-slate-800 dark:bg-slate-900/70"
+      >
+        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          Không thể truy cập
+        </p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          {errProfile || "Bạn không có quyền."}
+        </p>
+        <Link
+          href="/auth/login"
+          className="inline-flex text-sm font-medium text-slate-900 hover:underline dark:text-slate-100"
+        >
           → Đăng nhập
         </Link>
       </div>
@@ -177,7 +201,10 @@ export default function CandidateProfilePage() {
 
   if (loading) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm text-sm text-slate-600">
+      <div
+        className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm text-sm text-slate-600
+                   dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300"
+      >
         Đang tải hồ sơ...
       </div>
     );
@@ -189,9 +216,15 @@ export default function CandidateProfilePage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-xl md:text-2xl font-semibold text-slate-900">Hồ sơ người dùng</h1>
-          <p className="text-sm text-slate-500">Thông tin tài khoản + CV đã lưu.</p>
+        <div className="space-y-2">
+          <div>
+            <h1 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-slate-100">
+              Hồ sơ người dùng
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Thông tin tài khoản + CV đã lưu.
+            </p>
+          </div>
 
           {errProfile ? <InlineAlert type="error" message={errProfile} /> : null}
           {errCvs ? <InlineAlert type="warn" message={errCvs} /> : null}
@@ -199,67 +232,136 @@ export default function CandidateProfilePage() {
       </div>
 
       {/* Account */}
-      <section className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm">
+      <section
+        className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm
+                   dark:border-slate-800 dark:bg-slate-900/70"
+      >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
-            <p className="text-xs text-slate-500">Tài khoản</p>
-            <p className="text-sm font-semibold text-slate-900">{safeText(email)}</p>
-            <p className="text-xs text-slate-500">
-              Role: <span className="font-medium text-slate-700">{safeText(role, "candidate")}</span>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Tài khoản</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              {safeText(email)}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Role:{" "}
+              <span className="font-medium text-slate-700 dark:text-slate-100">
+                {safeText(role, "candidate")}
+              </span>
               {" · "}
-              UserId: <span className="font-medium text-slate-700">{candidate?.userId ?? "—"}</span>
+              UserId:{" "}
+              <span className="font-medium text-slate-700 dark:text-slate-100">
+                {candidate?.userId ?? "—"}
+              </span>
             </p>
           </div>
 
           <div className="text-right">
-            <p className="text-xs text-slate-500">Tổng CV đã lưu</p>
-            <p className="text-3xl font-semibold text-slate-900">{totalCv}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Tổng CV đã lưu
+            </p>
+            <p className="text-3xl font-semibold text-slate-900 dark:text-slate-100">
+              {totalCv}
+            </p>
           </div>
         </div>
       </section>
 
       {/* Candidate info */}
-      <section className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm space-y-4">
+      <section
+        className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm space-y-4
+                   dark:border-slate-800 dark:bg-slate-900/70"
+      >
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-900">Thông tin ứng viên</h2>
-
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            Thông tin ứng viên
+          </h2>
         </div>
 
         {!candidate ? (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600">
+          <div
+            className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600
+                       dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
+          >
             Không có dữ liệu ứng viên.
           </div>
         ) : (
           <>
+            {/* avatar (nếu có) */}
+            {candidate.avatarUrl && (
+              <div className="flex items-center gap-3">
+                <div className="h-14 w-14 rounded-full overflow-hidden border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`${API_BASE}${candidate.avatarUrl}`}
+                    alt="Avatar"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Avatar từ hồ sơ Candidate.
+                </p>
+              </div>
+            )}
+
             <div className="grid md:grid-cols-2 gap-4 text-sm">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                <p className="text-xs text-slate-500">Họ và tên</p>
-                <p className="mt-1 font-semibold text-slate-900">{safeText(candidate.fullName)}</p>
+              <div
+                className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4
+                           dark:border-slate-700 dark:bg-slate-900/60"
+              >
+                <p className="text-xs text-slate-500 dark:text-slate-400">Họ và tên</p>
+                <p className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                  {safeText(candidate.fullName)}
+                </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                <p className="text-xs text-slate-500">SĐT</p>
-                <p className="mt-1 font-semibold text-slate-900">{safeText(candidate.phone)}</p>
+              <div
+                className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4
+                           dark:border-slate-700 dark:bg-slate-900/60"
+              >
+                <p className="text-xs text-slate-500 dark:text-slate-400">SĐT</p>
+                <p className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                  {safeText(candidate.phone)}
+                </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                <p className="text-xs text-slate-500">Ngày sinh</p>
-                <p className="mt-1 font-semibold text-slate-900">{fmtDate(candidate.dob)}</p>
+              <div
+                className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4
+                           dark:border-slate-700 dark:bg-slate-900/60"
+              >
+                <p className="text-xs text-slate-500 dark:text-slate-400">Ngày sinh</p>
+                <p className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                  {fmtDate(candidate.dob)}
+                </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                <p className="text-xs text-slate-500">Giới tính</p>
-                <p className="mt-1 font-semibold text-slate-900">{sexLabel(candidate.sex)}</p>
+              <div
+                className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4
+                           dark:border-slate-700 dark:bg-slate-900/60"
+              >
+                <p className="text-xs text-slate-500 dark:text-slate-400">Giới tính</p>
+                <p className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                  {sexLabel(candidate.sex)}
+                </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 md:col-span-2">
-                <p className="text-xs text-slate-500">Địa chỉ</p>
-                <p className="mt-1 font-semibold text-slate-900">{safeText(candidate.address)}</p>
+              <div
+                className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 md:col-span-2
+                           dark:border-slate-700 dark:bg-slate-900/60"
+              >
+                <p className="text-xs text-slate-500 dark:text-slate-400">Địa chỉ</p>
+                <p className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                  {safeText(candidate.address)}
+                </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 md:col-span-2">
-                <p className="text-xs text-slate-500">Tóm tắt</p>
-                <p className="mt-1 text-slate-700 whitespace-pre-line">{safeText(candidate.summary)}</p>
+              <div
+                className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 md:col-span-2
+                           dark:border-slate-700 dark:bg-slate-900/60"
+              >
+                <p className="text-xs text-slate-500 dark:text-slate-400">Tóm tắt</p>
+                <p className="mt-1 text-slate-700 whitespace-pre-line dark:text-slate-200">
+                  {safeText(candidate.summary)}
+                </p>
               </div>
             </div>
           </>
@@ -267,13 +369,21 @@ export default function CandidateProfilePage() {
       </section>
 
       {/* CV list (REAL) */}
-      <section className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm space-y-4">
+      <section
+        className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm space-y-4
+                   dark:border-slate-800 dark:bg-slate-900/70"
+      >
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-900">CV đã lưu</h2>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            CV đã lưu
+          </h2>
         </div>
 
         {cvs.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600">
+          <div
+            className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600
+                       dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
+          >
             Chưa có CV nào.
           </div>
         ) : (
@@ -290,15 +400,23 @@ export default function CandidateProfilePage() {
               return (
                 <div
                   key={cv.id}
-                  className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 flex flex-wrap items-center justify-between gap-3"
+                  className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 flex flex-wrap items-center justify-between gap-3
+                             dark:border-slate-700 dark:bg-slate-900/60"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 truncate">
+                    <p className="text-sm font-semibold text-slate-900 truncate dark:text-slate-100">
                       {title}{" "}
-                      {cv.isDefault ? <span className="ml-2"><Badge>Mặc định</Badge></span> : null}
+                      {cv.isDefault ? (
+                        <span className="ml-2">
+                          <Badge>Mặc định</Badge>
+                        </span>
+                      ) : null}
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Loại: <span className="font-medium">{fileType}</span>
+                    <p className="text-xs text-slate-500 mt-1 dark:text-slate-400">
+                      Loại:{" "}
+                      <span className="font-medium text-slate-700 dark:text-slate-100">
+                        {fileType}
+                      </span>
                       {" · "}
                       Tạo: {created}
 
@@ -311,12 +429,15 @@ export default function CandidateProfilePage() {
                         href={fileHref}
                         target="_blank"
                         rel="noreferrer"
-                        className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:border-slate-900"
+                        className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:border-slate-900
+                                   dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-300"
                       >
                         Xem file
                       </a>
                     ) : (
-                      <span className="text-xs text-slate-500">Không có fileUrl</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        Không có fileUrl
+                      </span>
                     )}
                   </div>
                 </div>
