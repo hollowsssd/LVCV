@@ -3,19 +3,20 @@ const router = express.Router();
 const candidateController = require("../app/controllers/candidateController");
 const auth = require("../app/middlewares/auth");
 const authorization = require("../app/middlewares/authorization");
+const requireRole = require("../app/middlewares/requireRole");
 
-router.get("/me", auth, authorization("CANDIDATE"), candidateController.me);
-
-
-router.get("/", auth, authorization("CANDIDATE"), candidateController.index);
+router.get("/me", auth, requireRole, authorization("CANDIDATE"), candidateController.me);
 
 
-router.get("/:id", auth, authorization("CANDIDATE"), candidateController.show);
+router.get("/", auth, requireRole, authorization("CANDIDATE"), candidateController.index);
 
-router.post("/", auth, authorization("CANDIDATE"), candidateController.create);
 
-router.put("/:id", auth, authorization("CANDIDATE"), candidateController.update);
+router.get("/:id", auth, requireRole, authorization("CANDIDATE"), candidateController.show);
 
-router.delete("/:id", auth, authorization("CANDIDATE"), candidateController.delete);
+router.post("/", auth, requireRole, authorization("CANDIDATE"), candidateController.create);
+
+router.put("/:id", auth, requireRole, authorization("CANDIDATE"), candidateController.update);
+
+router.delete("/:id", auth, requireRole, authorization("CANDIDATE"), candidateController.delete);
 
 module.exports = router;

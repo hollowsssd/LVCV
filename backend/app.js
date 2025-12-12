@@ -4,6 +4,7 @@ const morgan = require('morgan');
 const app = express();
 const corsOption = require('./src/app/config/cors')
 const path = require("path");
+const { passport } = require('./src/app/config/passport');
 
 app.use(express.json());
 
@@ -11,6 +12,9 @@ app.use(express.json());
 app.use(cors(corsOption));
 
 app.use(express.urlencoded({ extended: true }));
+
+// Initialize Passport (không cần session vì dùng JWT)
+app.use(passport.initialize());
 
 // serve uploads
 const PROJECT_ROOT = path.resolve(__dirname, ".."); // vì server.js nằm trong backend
