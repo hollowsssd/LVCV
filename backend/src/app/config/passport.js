@@ -57,8 +57,12 @@ passport.use(new GoogleStrategy({
                     provider: 'google',
                     providerId: providerId,
                     avatarUrl: avatarUrl || user.avatarUrl,
-                    name: name || user.name
+                    name: name || user.name,
+                    emailVerified: true // Google đã xác thực email
                 }, { transaction: t });
+            } else if (!user.emailVerified) {
+                // Nếu user đã dùng Google nhưng chưa verified, cập nhật
+                await user.update({ emailVerified: true }, { transaction: t });
             }
             await t.commit();
             return done(null, user);
@@ -72,7 +76,8 @@ passport.use(new GoogleStrategy({
             provider: 'google',
             providerId,
             avatarUrl,
-            name
+            name,
+            emailVerified: true // Google đã xác thực email
         }, { transaction: t });
 
         // Don't create profile yet - will be created when user selects role
