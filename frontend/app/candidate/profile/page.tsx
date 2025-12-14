@@ -19,7 +19,7 @@ type CandidateMe = {
   fullName: string | null;
   phone: string | null;
   dob: string | null;
-  sex: boolean | null; // true=Nam, false=Nữ, null=Khác
+  sex: boolean | null; 
   address: string | null;
   summary: string | null;
   avatarUrl: string | null;
@@ -222,7 +222,7 @@ export default function CandidateProfilePage() {
               Hồ sơ người dùng
             </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Thông tin tài khoản + CV đã lưu.
+              Thông tin tài khoản
             </p>
           </div>
 
@@ -243,12 +243,7 @@ export default function CandidateProfilePage() {
               {safeText(email)}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Role:{" "}
-              <span className="font-medium text-slate-700 dark:text-slate-100">
-                {safeText(role, "candidate")}
-              </span>
-              {" · "}
-              UserId:{" "}
+              Id:{" "}
               <span className="font-medium text-slate-700 dark:text-slate-100">
                 {candidate?.userId ?? "—"}
               </span>
