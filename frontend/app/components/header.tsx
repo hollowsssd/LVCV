@@ -77,6 +77,9 @@ export default function Header() {
   const [notis, setNotis] = useState<Noti[]>([]);
   const [loadingNotis, setLoadingNotis] = useState(false);
 
+  // State cho avatar/logo user
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
+
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
   // đọc cookies mỗi lần route change (đủ dùng)
@@ -160,6 +163,36 @@ export default function Header() {
     const intervalId = setInterval(fetchCount, 60000);
     return () => clearInterval(intervalId);
   }, [user, token, setSocketUnread]);
+
+  // Fetch avatar/logo của user
+  useEffect(() => {
+    if (!user || !token) {
+      setUserAvatarUrl(null);
+      return;
+    }
+
+    const fetchAvatar = async () => {
+      try {
+        const endpoint = user.role === 'candidate'
+          ? `${API_BASE}/api/candidates/me`
+          : `${API_BASE}/api/employers/me`;
+
+        const res = await axios.get(endpoint, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const url = user.role === 'candidate'
+          ? res.data?.avatarUrl
+          : res.data?.logoUrl;
+
+        setUserAvatarUrl(url || null);
+      } catch {
+        setUserAvatarUrl(null);
+      }
+    };
+
+    fetchAvatar();
+  }, [user, token]);
 
   const handleLogout = () => {
     Cookies.remove("token", { path: "/" });
@@ -258,7 +291,7 @@ export default function Header() {
                        dark:border-slate-800 dark:bg-slate-950/70">
       <div className="mx-auto max-w-6xl px-4 flex h-14 items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2 flex-shrink-0">
           <div className="relative h-9 w-9 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <Image src="/logo.png" alt="Logo" fill className="object-cover" priority />
           </div>
@@ -269,7 +302,7 @@ export default function Header() {
         </Link>
 
         {/* Nav */}
-        <nav className="hidden md:flex items-center gap-6 text-xs text-slate-600 dark:text-slate-300">
+        <nav className="hidden lg:flex items-center gap-4 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap mx-6">
           {menuItems.map((item) => {
             const isActive = pathname === "/" && hash === item.hash;
 
@@ -326,7 +359,7 @@ export default function Header() {
         </nav>
 
         {/* Right */}
-        <div className="flex items-center gap-2" ref={wrapRef}>
+        <div className="flex items-center gap-2 flex-shrink-0" ref={wrapRef}>
           {!user ? (
             <>
               <Link href="/auth/login" className="text-xs font-medium text-slate-700 hover:text-slate-900
@@ -371,12 +404,19 @@ export default function Header() {
 
                 {/* ========== NOTIFICATION DROPDOWN ========== */}
                 {notiOpen && (
-                  <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-slate-200 bg-white shadow-md overflow-hidden text-xs">
-                    <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
-                      <p className="font-medium text-slate-900">Thông báo</p>
+                  <div
+                    className="absolute right-0 mt-2 w-80 rounded-2xl border border-slate-200 bg-white shadow-md overflow-hidden text-xs
+               dark:border-slate-800 dark:bg-slate-900"
+                    role="menu"
+                    aria-label="Danh sách thông báo"
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2 dark:border-slate-800">
+                      <p className="font-medium text-slate-900 dark:text-slate-100">Thông báo</p>
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-slate-500">{socketUnread} chưa đọc</span>
-                        {/* Hiển thị trạng thái socket */}
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                          {socketUnread} chưa đọc
+                        </span>
                         {isConnected ? (
                           <span className="text-[10px] text-green-600">● Live</span>
                         ) : (
@@ -385,40 +425,54 @@ export default function Header() {
                       </div>
                     </div>
 
-                    <div className="max-h-80 overflow-auto">
+                    {/* List */}
+                    <div className="max-h-80 overflow-auto bg-white dark:bg-slate-900">
                       {loadingNotis ? (
-                        <div className="px-3 py-6 text-center text-slate-500 dark:text-slate-400">Đang tải...</div>
+                        <div className="px-3 py-6 text-center text-slate-500 dark:text-slate-400">
+                          Đang tải...
+                        </div>
                       ) : notis.length === 0 ? (
-                        <div className="px-3 py-6 text-center text-slate-500 dark:text-slate-400">Chưa có thông báo</div>
+                        <div className="px-3 py-6 text-center text-slate-500 dark:text-slate-400">
+                          Chưa có thông báo
+                        </div>
                       ) : (
-                        notis.map((n) => (
-                          <button
-                            key={n.id}
-                            onClick={() => markReadAndGo(n)}
-                            className={[
-                              "w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-slate-50",
-                              "dark:border-slate-800 dark:hover:bg-slate-800",
-                              !n.isRead ? "bg-slate-50/70 dark:bg-slate-800/40" : "",
-                            ].join(" ")}
-                          >
-                            <div className="flex items-start gap-2">
-                              {!n.isRead && <span className="mt-1.5 h-2 w-2 rounded-full bg-red-500" />}
-                              <div className="min-w-0">
-                                <p className="text-slate-900 font-medium truncate dark:text-slate-100">{n.title}</p>
-                                <p className="text-slate-500 line-clamp-2 dark:text-slate-300">{n.message}</p>
-                              </div>
-                            </div>
-                          </button>
-                        ))
+                        <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {notis.map((n) => (
+                            <li key={n.id}>
+                              <button
+                                type="button"
+                                onClick={() => markReadAndGo(n)}
+                                className={[
+                                  "flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-slate-50",
+                                  "dark:hover:bg-slate-800",
+                                  !n.isRead ? "bg-slate-50/70 dark:bg-slate-800/40" : "",
+                                ].join(" ")}
+                                role="menuitem"
+                              >
+                                {!n.isRead && (
+                                  <span className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-red-500" />
+                                )}
+                                <div className="min-w-0">
+                                  <p className="truncate text-slate-900 font-medium dark:text-slate-100">
+                                    {n.title}
+                                  </p>
+                                  <p className="text-slate-500 line-clamp-2 dark:text-slate-300">
+                                    {n.message}
+                                  </p>
+                                </div>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
                       )}
                     </div>
 
-                    <div className="px-3 py-2 border-t border-slate-100 bg-white
-                                    dark:border-slate-800 dark:bg-slate-900">
+                    {/* Footer */}
+                    <div className="border-t border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
                       <Link
                         href="/notifications"
                         className="block text-center text-[11px] font-medium text-slate-700 hover:text-slate-900
-                                   dark:text-slate-200 dark:hover:text-white"
+                   dark:text-slate-200 dark:hover:text-white"
                         onClick={() => setNotiOpen(false)}
                       >
                         Xem tất cả
@@ -439,12 +493,15 @@ export default function Header() {
                   className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs hover:border-slate-900
                              dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-200"
                 >
-                  <div className="h-6 w-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[11px]
-                                  dark:bg-slate-100 dark:text-slate-900">
-                    {user.email[0].toUpperCase()}
-                  </div>
-                  <div className="hidden sm:flex flex-col text-left">
-                    <span className="text-xs font-medium text-slate-900 dark:text-slate-100">{user.email}</span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={userAvatarUrl?.startsWith('/uploads') ? `${API_BASE}${userAvatarUrl}` : '/placeholder.png'}
+                    alt="Avatar"
+                    className="h-6 w-6 rounded-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
+                  />
+                  <div className="hidden sm:flex flex-col text-left max-w-[150px]">
+                    <span className="text-xs font-medium text-slate-900 dark:text-slate-100 truncate">{user.email}</span>
                     <span className="text-[10px] text-slate-500 uppercase dark:text-slate-400">{user.role}</span>
                   </div>
                 </button>
@@ -467,18 +524,28 @@ export default function Header() {
                           Hồ sơ người dùng
                         </Link>
                       ) : (
-                        <Link
-                          href="/employer/dashboard"
-                          className="block px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-200"
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          Hồ sơ nhà tuyển dụng
-                        </Link>
+                        <>
+                          <Link
+                            href="/employer/profile"
+                            className="block px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-200"
+                            onClick={() => setMenuOpen(false)}
+                          >
+                            Hồ sơ nhà tuyển dụng
+                          </Link>
+
+                          <Link
+                            href="/employer/dashboard"
+                            className="block px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-200"
+                            onClick={() => setMenuOpen(false)}
+                          >
+                            Quản lý công việc
+                          </Link>
+                        </>
                       )}
 
                       <button
                         onClick={handleLogout}
-                        className="w-full text-left px-3 py-2 hover:bg-slate-50 text-red-600 dark:hover:bg-slate-800"
+                        className="cursor-pointer w-full text-left px-3 py-2 hover:bg-slate-50 text-red-600 dark:hover:bg-slate-800"
                       >
                         Đăng xuất
                       </button>

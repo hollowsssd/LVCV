@@ -3,17 +3,23 @@ const router = express.Router();
 const employerController = require("../app/controllers/employerController");
 const auth = require("../app/middlewares/auth");
 const authorization = require("../app/middlewares/authorization");
+const requireRole = require("../app/middlewares/requireRole");
+const { uploadLogo, handleImageUpload } = require("../app/config/upload");
 // lấy thông tin của employer tring
 router.get("/me", auth, authorization("EMPLOYER"), employerController.me);
 
-router.get("/", auth, authorization("EMPLOYER"), employerController.index);
+router.get("/me", auth, requireRole, authorization("EMPLOYER"), employerController.me);
 
-router.get("/:id", auth, authorization("EMPLOYER"), employerController.show);
+router.get("/", auth, requireRole, authorization("EMPLOYER"), employerController.index);
 
-router.post("/", auth, authorization("EMPLOYER"), employerController.create);
+router.get("/:id", auth, requireRole, authorization("EMPLOYER"), employerController.show);
 
-router.put("/:id", auth, authorization("EMPLOYER"), employerController.update);
+router.post("/", auth, requireRole, authorization("EMPLOYER"), employerController.create);
 
-router.delete("/:id", auth, authorization("EMPLOYER"), employerController.delete);
+router.put("/:id", auth, requireRole, authorization("EMPLOYER"), employerController.update);
+
+router.put("/:id/logo", auth, requireRole, authorization("EMPLOYER"), handleImageUpload(uploadLogo, "logo"), employerController.uploadLogo);
+
+router.delete("/:id", auth, requireRole, authorization("EMPLOYER"), employerController.delete);
 
 module.exports = router;

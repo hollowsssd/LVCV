@@ -117,8 +117,9 @@ const handleUpload = (required) => (req, res, next) => {
 
 
 // Routes
+const requireRole = require("../app/middlewares/requireRole");
 
-router.use(auth, author('CANDIDATE'));
+router.use(auth, requireRole, author('CANDIDATE'));
 
 router.post("/rate-cv", requireCandidate, uploadRateCv.single("cvfile"), cvController.rateCV);
 
