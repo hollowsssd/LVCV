@@ -13,7 +13,7 @@ router.get("/profile", auth, userController.profile);
 
 router.get("/:id", userController.show);
 
-router.post("/", auth, authorization("ADMIN"), ratelimit, userController.create);
+router.post("/", auth, authorization("ADMIN"), userController.create);
 
 router.put("/:id", userController.update);
 

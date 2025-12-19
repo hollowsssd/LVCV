@@ -52,7 +52,7 @@ export default function JobDetailModal({
         <div className="rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
           <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
             <div className="space-y-1">
-              <p className="text-xs text-slate-500">{job.companyName || "—"}</p>
+              <p className="text-xs text-slate-500">{job.Employer?.companyName || "—"}</p>
               <h3 className="text-base font-semibold text-slate-900">{job.title}</h3>
               <p className="text-[11px] text-slate-500">
                 {job.location || "—"} · {job.jobType || "—"} · {job.experienceRequired || "—"}

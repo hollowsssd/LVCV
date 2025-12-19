@@ -99,7 +99,7 @@ export default function ApplyCvModal({
             <div className="space-y-1">
               <p className="text-xs text-slate-500">Nộp CV</p>
               <h3 className="text-base font-semibold text-slate-900">{job.title}</h3>
-              <p className="text-[11px] text-slate-500">{job.companyName || "—"}</p>
+              <p className="text-[11px] text-slate-500">{job.Employer?.companyName || "—"}</p>
             </div>
 
             <button

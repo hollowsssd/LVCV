@@ -2,7 +2,9 @@
 
 import type { CvEvaluateReport, RateCvApiRes } from "@/app/candidate/cv/types";
 import { normalizeRateCv } from "@/app/candidate/cv/types";
+import JobDetailModal from "@/app/components/JobDetailModal";
 import Toast from "@/app/components/Toast";
+import type { Job as GlobalJob } from "@/app/types";
 import axios, { AxiosError } from "axios";
 import Cookies from "js-cookie";
 import Link from "next/link";
@@ -17,10 +19,11 @@ type ApiErrorResponse = { message?: string; detail?: string; error?: string };
 type Job = {
   id: number;
   title: string;
-  company: string;
   location: string;
-  match: number; // 0–1
+  deadline: string | null;
+  Employer: { companyName: string };
 };
+
 
 type PendingEvaluation = {
   file: File;
@@ -52,17 +55,24 @@ type CvCreateResponse = {
   createdAt?: string | null;
 };
 
+type Cv = {
+  id: number;
+  title: string | null;
+  isDefault: boolean;
+};
+
 /* ===================== Const ===================== */
 
-const mockJobs: Job[] = [
-  { id: 1, title: "Backend Intern", company: "ABC Software", location: "HCMC", match: 0.91 },
-  { id: 2, title: "Node.js Developer (Junior)", company: "XYZ Tech", location: "Remote", match: 0.84 },
-  { id: 3, title: "Fullstack Intern (React/Node)", company: "Cool Startup", location: "HCMC", match: 0.79 },
-];
+// const mockJobs: Job[] = [
+//   { id: 1, title: "Backend Intern", company: "ABC Software", location: "HCMC", match: 0.91 },
+//   { id: 2, title: "Node.js Developer (Junior)", company: "XYZ Tech", location: "Remote", match: 0.84 },
+//   { id: 3, title: "Fullstack Intern (React/Node)", company: "Cool Startup", location: "HCMC", match: 0.79 },
+// ];
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
 const CV_SAVE_ENDPOINT = `${API_BASE}/api/cvs`;
 const CV_RATE_ENDPOINT = `${API_BASE}/api/cvs/rate-cv`;
+const Recommend_Job = `${API_BASE}/api/jobs/search`;
 
 // base keys (sẽ scope theo email)
 const DRAFT_META_KEY = "cv_report_draft";
@@ -160,6 +170,180 @@ async function idbDel(key: string): Promise<void> {
     tx.onerror = () => reject(tx.error);
   });
   db.close();
+}
+
+/* ===================== ApplyCvModal ===================== */
+
+function ApplyCvModal({
+  open,
+  onClose,
+  job,
+  token,
+  onApplied,
+  toastError,
+}: {
+  open: boolean;
+  onClose: () => void;
+  job: GlobalJob | null;
+  token: string;
+  onApplied: () => void;
+  toastError: (msg: string) => void;
+}) {
+  const [cvs, setCvs] = useState<Cv[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [cvId, setCvId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!open || !token) return;
+
+    const fetchCvs = async () => {
+      try {
+        setLoading(true);
+        const res = await axios.get<Cv[]>(`${API_BASE}/api/cvs/mine`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const arr = Array.isArray(res.data) ? res.data : [];
+        setCvs(arr);
+
+        const def = arr.find((x) => x.isDefault);
+        setCvId(def?.id ?? arr[0]?.id ?? null);
+      } catch (err) {
+        console.error("[ApplyCvModal] fetch cvs error:", err);
+        setCvs([]);
+        setCvId(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCvs();
+  }, [open, token]);
+
+  const submit = async () => {
+    if (!job) return;
+    if (!cvId) {
+      toastError("Bạn chưa có CV để apply. Hãy upload CV trước.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await axios.post(
+        `${API_BASE}/api/applications`,
+        { jobId: job.id, cvId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      onApplied();
+      onClose();
+    } catch (err) {
+      toastError(pickErr(err, "Apply thất bại. Vui lòng thử lại."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!open || !job) return null;
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
+        aria-label="Đóng"
+      />
+
+      <div className="absolute left-1/2 top-1/2 w-[94vw] max-w-lg -translate-x-1/2 -translate-y-1/2">
+        <div
+          className="rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden
+                     dark:border-slate-800 dark:bg-slate-900"
+        >
+          <div
+            className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4
+                       dark:border-slate-800"
+          >
+            <div className="space-y-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400">Apply vào</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                {job.title}
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {job.Employer?.companyName || "—"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs hover:border-slate-900
+                         dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-300"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="p-5 space-y-4">
+            {loading ? (
+              <div
+                className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600
+                           dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
+              >
+                Đang tải danh sách CV...
+              </div>
+            ) : cvs.length === 0 ? (
+              <div
+                className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600
+                           dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
+              >
+                Bạn chưa có CV nào. Hãy upload CV trước rồi quay lại apply.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  Chọn CV
+                </label>
+                <select
+                  value={cvId ?? ""}
+                  onChange={(e) => setCvId(Number(e.target.value))}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none
+                             focus:border-slate-900 focus:bg-white
+                             dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:focus:border-slate-300"
+                >
+                  {cvs.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title ? c.title : `CV #${c.id}`} {c.isDefault ? "(Default)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:border-slate-900
+                           dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-300"
+              >
+                Huỷ
+              </button>
+              <button
+                type="button"
+                onClick={submit}
+                disabled={submitting || cvs.length === 0}
+                className="rounded-full bg-slate-900 text-white px-4 py-2 text-sm font-medium hover:bg-slate-800 disabled:opacity-60
+                           dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+              >
+                {submitting ? "Đang apply..." : "Apply"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /* ===================== Inline Alert ===================== */
@@ -423,7 +607,7 @@ export default function CandidateDashboard() {
   }, []);
 
   const token = useMemo(() => Cookies.get("token") || "", []);
-  const role = useMemo(() => (Cookies.get("role") || "").toLowerCase(), []);
+  // const role = useMemo(() => (Cookies.get("role") || "").toLowerCase(), []);
   const owner = useMemo(() => (Cookies.get("email") || "unknown").toLowerCase().trim(), []);
 
   // keys scoped theo user
@@ -431,12 +615,16 @@ export default function CandidateDashboard() {
   const fileBlobKey = useMemo(() => `${FILE_BLOB_KEY}:${owner}`, [owner]);
   const savedInfoKey = useMemo(() => `${SAVED_INFO_KEY}:${owner}`, [owner]);
 
+  const [recommendedJobs, setRecommendedJobs] = useState<Job[]>([]);
   const [cvSaved, setCvSaved] = useState<SavedInfo | null>(null);
   const [pending, setPending] = useState<PendingEvaluation | null>(null);
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadingJobId, setLoadingJobId] = useState<number | null>(null);
+  const [selectedJob, setSelectedJob] = useState<GlobalJob | null>(null);
+  const [applyJob, setApplyJob] = useState<GlobalJob | null>(null);
+  const [loadingRecommendedJobs, setLoadingRecommendedJobs] = useState(false);
 
   // cleanup legacy keys
   useEffect(() => {
@@ -487,22 +675,42 @@ export default function CandidateDashboard() {
     };
   }, [draftMetaKey, fileBlobKey, savedInfoKey]);
 
+  useEffect(() => {
+    (async () => {
+      if (!pending?.evaluated.recommendQuery) return;
+      try {
+        setLoadingRecommendedJobs(true);
+        const res = await axios.get(Recommend_Job, {
+          params: { recommendJob: pending?.evaluated.recommendQuery },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        console.log('res :>> ', res);
+        setRecommendedJobs(res.data);
+      } catch (error) {
+        console.log('lỗi', error);
+      } finally {
+        setLoadingRecommendedJobs(false);
+      }
+    })();
+  }, [pending?.evaluated.recommendQuery]);
+
+
   // chặn role khác candidate
-  if (role && role !== "candidate") {
-    return (
-      <div
-        className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm
-                   dark:border-slate-800 dark:bg-slate-900/70"
-      >
-        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-          Không có quyền truy cập
-        </p>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          Trang này chỉ dành cho tài khoản Candidate.
-        </p>
-      </div>
-    );
-  }
+  // if (role && role !== "candidate") {
+  //   return (
+  //     <div
+  //       className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm
+  //                  dark:border-slate-800 dark:bg-slate-900/70"
+  //     >
+  //       <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+  //         Không có quyền truy cập
+  //       </p>
+  //       <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+  //         Trang này chỉ dành cho tài khoản Candidate.
+  //       </p>
+  //     </div>
+  //   );
+  // }
 
   const saveCv = async () => {
     if (!pending) {
@@ -562,31 +770,15 @@ export default function CandidateDashboard() {
     }
   };
 
-  const handleApply = async (job: Job) => {
-    try {
-      setLoadingJobId(job.id);
-
-      if (!cvSaved?.id) {
-        showToast(
-          { type: "error", message: "Bạn chưa lưu CV. Hãy đánh giá rồi bấm Lưu CV." },
-          1800
-        );
-        return;
-      }
-
-      await new Promise((r) => setTimeout(r, 600));
+  const openApply = (job: GlobalJob) => {
+    if (!token) {
       showToast(
-        { type: "success", message: `Đã nộp CV cho "${job.title}" thành công.` },
-        1100
+        { type: "error", message: "Bạn cần đăng nhập Candidate để apply." },
+        2000
       );
-    } catch {
-      showToast(
-        { type: "error", message: "Không thể nộp CV lúc này. Vui lòng thử lại." },
-        1400
-      );
-    } finally {
-      setLoadingJobId(null);
+      return;
     }
+    setApplyJob(job);
   };
 
   const displayedScore = pending?.evaluated.score ?? null;
@@ -705,36 +897,40 @@ export default function CandidateDashboard() {
 
                 {(pending.evaluated.strengths.length > 0 ||
                   pending.evaluated.weaknesses.length > 0) && (
-                  <div className="grid grid-cols-2 gap-3 text-[11px]">
-                    <div
-                      className="rounded-xl border border-slate-200 bg-white p-3
+                    <div className="grid grid-cols-2 gap-3 text-[11px]">
+                      <div
+                        className="rounded-xl border border-slate-200 bg-white p-3
                                  dark:border-slate-700 dark:bg-slate-900/70"
-                    >
-                      <p className="font-semibold text-slate-900 mb-1 dark:text-slate-100">
-                        Điểm mạnh
-                      </p>
-                      <ul className="list-disc list-inside text-slate-600 space-y-1 dark:text-slate-300">
-                        {pending.evaluated.strengths.slice(0, 3).map((s) => (
-                          <li key={s}>{s}</li>
-                        ))}
-                      </ul>
-                    </div>
+                      >
+                        <p className="font-semibold text-slate-900 mb-1 dark:text-slate-100">
+                          Điểm mạnh
+                        </p>
+                        <ul className="list-disc list-inside text-slate-600 space-y-1 dark:text-slate-300">
+                          {pending.evaluated.strengths.slice(0, 3).map((s) => (
+                            <li key={s}>{s}</li>
+                          ))}
+                        </ul>
+                      </div>
 
-                    <div
-                      className="rounded-xl border border-slate-200 bg-white p-3
+                      <div
+                        className="rounded-xl border border-slate-200 bg-white p-3
                                  dark:border-slate-700 dark:bg-slate-900/70"
-                    >
-                      <p className="font-semibold text-slate-900 mb-1 dark:text-slate-100">
-                        Cần cải thiện
-                      </p>
-                      <ul className="list-disc list-inside text-slate-600 space-y-1 dark:text-slate-300">
-                        {pending.evaluated.weaknesses.slice(0, 3).map((s) => (
-                          <li key={s}>{s}</li>
-                        ))}
-                      </ul>
+                      >
+                        <p className="font-semibold text-slate-900 mb-1 dark:text-slate-100">
+                          Cần cải thiện
+                        </p>
+                        <ul className="list-disc list-inside text-slate-600 space-y-1 dark:text-slate-300">
+                          {pending.evaluated.weaknesses.slice(0, 3).map((s) => (
+                            <li key={s}>{s}</li>
+                          ))}
+                        </ul>
+
+                        <p className="font-semibold text-slate-900 mb-1 dark:text-slate-100">
+                          {pending.evaluated.recommendQuery}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap gap-2">
@@ -806,64 +1002,101 @@ export default function CandidateDashboard() {
             </div>
           </section>
 
-          {/* Right: Job suggestions */}
-          <section
-            className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm space-y-4
-                       dark:border-slate-800 dark:bg-slate-900/70"
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                Job gợi ý từ AI
-              </h2>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                Dựa trên CV hiện tại của bạn
-              </span>
-            </div>
+          {/* Right: Job suggestions - only show when loading or has jobs */}
+          {(loadingRecommendedJobs || recommendedJobs.length > 0) && (
+            <section
+              className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm space-y-4
+                         dark:border-slate-800 dark:bg-slate-900/70"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  Job gợi ý từ AI
+                </h2>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Dựa trên CV hiện tại của bạn
+                </span>
+              </div>
 
-            <div className="space-y-3">
-              {mockJobs.map((job) => (
+              {loadingRecommendedJobs ? (
                 <div
-                  key={job.id}
-                  className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 hover:border-slate-900 transition
-                             dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-slate-300"
+                  className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600
+                             dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
                 >
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                      {job.title}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {job.company} · {job.location}
-                    </p>
-                  </div>
-
-                  <div className="text-right space-y-1">
-                    <span
-                      className="inline-flex rounded-full bg-slate-900 text-white text-[11px] px-2.5 py-0.5
-                                 dark:bg-slate-100 dark:text-slate-900"
-                    >
-                      Match {(job.match * 100).toFixed(0)}%
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => handleApply(job)}
-                      disabled={loadingJobId === job.id}
-                      className="inline-flex items-center justify-center rounded-full bg-white text-[11px] font-medium px-3 py-1 border border-slate-300 hover:border-slate-900 disabled:opacity-60 disabled:cursor-not-allowed
-                                 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-300"
-                    >
-                      {loadingJobId === job.id ? "Đang nộp..." : "Apply ngay"}
-                    </button>
-                  </div>
+                  Đang tải danh sách job gợi ý...
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div className="space-y-3">
+                  {recommendedJobs.map((job) => (
+                    <div
+                      key={job.id}
+                      className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 hover:border-slate-900 transition
+                                 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-slate-300"
+                    >
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                          {job.title}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {job.Employer?.companyName} · {job.location}
+                        </p>
+                      </div>
 
-            <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-              * Apply cần CV đã <b>lưu</b> (file). Nếu chưa lưu, hãy bấm “Lưu CV” ở khung bên trái.
-            </p>
-          </section>
+                      <div className="text-right space-y-1">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedJob(job as unknown as GlobalJob)}
+                          className="inline-flex rounded-full bg-slate-900 text-white text-[11px] px-2.5 py-0.5 hover:bg-slate-700 transition cursor-pointer
+                                     dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+                        >
+                          Chi tiết
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => openApply(job as unknown as GlobalJob)}
+                          className="inline-flex items-center justify-center rounded-full bg-white text-[11px] font-medium px-3 py-1 border border-slate-300 hover:border-slate-900
+                                     dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-300"
+                        >
+                          Apply ngay
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                * Apply cần CV đã <b>lưu</b> (file). Nếu chưa lưu, hãy bấm "Lưu CV" ở khung bên trái.
+              </p>
+            </section>
+          )}
         </div>
       </div>
+
+      {/* Job Detail Modal */}
+      <JobDetailModal
+        open={!!selectedJob}
+        onClose={() => setSelectedJob(null)}
+        job={selectedJob}
+        onApply={() => {
+          if (selectedJob) {
+            openApply(selectedJob);
+            setSelectedJob(null);
+          }
+        }}
+      />
+
+      {/* Apply CV Modal */}
+      <ApplyCvModal
+        open={!!applyJob}
+        onClose={() => setApplyJob(null)}
+        job={applyJob}
+        token={token}
+        onApplied={() =>
+          showToast({ type: "success", message: "Apply thành công!" }, 1200)
+        }
+        toastError={(msg) => showToast({ type: "error", message: msg }, 2000)}
+      />
     </>
   );
 }
