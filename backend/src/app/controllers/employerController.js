@@ -10,7 +10,21 @@ class employerController {
       return res.status(500).json({ error: "Lỗi lấy danh sách employer" });
     }
   }
+  // thong tin nha tuyen dung
+async me(req, res) {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Chưa đăng nhập" });
 
+      const employer = await Employer.findOne({
+        where: { userId: req.user.id },
+      });
+
+      if (!employer) return res.status(404).json({ message: "Chưa có hồ sơ employer" });
+      return res.json(employer);
+    } catch (error) {
+      return res.status(500).json({ error: "Lỗi lấy empolyer" });
+    }
+}
   // GET /api/employers/:id
   async show(req, res) {
     try {

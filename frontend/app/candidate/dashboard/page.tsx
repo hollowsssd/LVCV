@@ -427,9 +427,9 @@ export default function CandidateDashboard() {
   const owner = useMemo(() => (Cookies.get("email") || "unknown").toLowerCase().trim(), []);
 
   // keys scoped theo user
-  const draftMetaKey = useMemo(() => `${DRAFT_META_KEY}:${owner}`, [owner]);
-  const fileBlobKey = useMemo(() => `${FILE_BLOB_KEY}:${owner}`, [owner]);
-  const savedInfoKey = useMemo(() => `${SAVED_INFO_KEY}:${owner}`, [owner]);
+const draftMetaKey = DRAFT_META_KEY;
+const fileBlobKey = FILE_BLOB_KEY;
+const savedInfoKey = SAVED_INFO_KEY;
 
   const [cvSaved, setCvSaved] = useState<SavedInfo | null>(null);
   const [pending, setPending] = useState<PendingEvaluation | null>(null);
@@ -439,14 +439,7 @@ export default function CandidateDashboard() {
   const [loadingJobId, setLoadingJobId] = useState<number | null>(null);
 
   // cleanup legacy keys
-  useEffect(() => {
-    try {
-      sessionStorage.removeItem("cv_report_draft");
-      sessionStorage.removeItem("cv_saved_info");
-    } catch {
-      // ignore
-    }
-  }, []);
+
 
   // restore saved info + draft theo user
   useEffect(() => {
@@ -485,7 +478,7 @@ export default function CandidateDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [draftMetaKey, fileBlobKey, savedInfoKey]);
+  }, []);
 
   // chặn role khác candidate
   if (role && role !== "candidate") {
@@ -563,31 +556,53 @@ export default function CandidateDashboard() {
   };
 
   const handleApply = async (job: Job) => {
-    try {
-      setLoadingJobId(job.id);
+  try {
+    setLoadingJobId(job.id);
 
-      if (!cvSaved?.id) {
-        showToast(
-          { type: "error", message: "Bạn chưa lưu CV. Hãy đánh giá rồi bấm Lưu CV." },
-          1800
-        );
-        return;
-      }
-
-      await new Promise((r) => setTimeout(r, 600));
+    if (!token) {
       showToast(
-        { type: "success", message: `Đã nộp CV cho "${job.title}" thành công.` },
-        1100
+        { type: "error", message: "Bạn cần đăng nhập Candidate để ứng tuyển." },
+        1800
       );
-    } catch {
-      showToast(
-        { type: "error", message: "Không thể nộp CV lúc này. Vui lòng thử lại." },
-        1400
-      );
-    } finally {
-      setLoadingJobId(null);
+      return;
     }
-  };
+
+    if (!cvSaved?.id) {
+      showToast(
+        { type: "error", message: "Bạn chưa lưu CV. Hãy đánh giá rồi bấm Lưu CV." },
+        1800
+      );
+      return;
+    }
+
+    await axios.post(
+      `${API_BASE}/api/applications`,
+      {
+        jobId: job.id,
+        cvId: Number(cvSaved.id),
+        coverLetter: "", // hoặc cho user nhập thêm
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    showToast(
+      { type: "success", message: `Đã nộp CV cho "${job.title}" thành công.` },
+      1500
+    );
+  } catch (err) {
+    showToast(
+      {
+        type: "error",
+        message: "Không thể nộp CV lúc này. Vui lòng thử lại.",
+      },
+      2000
+    );
+  } finally {
+    setLoadingJobId(null);
+  }
+};
 
   const displayedScore = pending?.evaluated.score ?? null;
   const displayedUpdatedAt = pending?.evaluatedAtIso

@@ -3,10 +3,11 @@
 import type { CvEvaluateReport, DraftData } from "@/app/candidate/cv/types";
 import Link from "next/link";
 import { useState } from "react";
-
+import Cookies from "js-cookie";
 function readDraftFromSession(): DraftData | null {
   try {
-    const raw = sessionStorage.getItem("cv_report_draft:hoang@gmail.com");
+    const owner = (Cookies.get("email") || "unknown").toLowerCase().trim();
+    const raw = sessionStorage.getItem(`cv_report_draft:${owner}`);
     if (!raw) return null;
 
     const parsed = JSON.parse(raw) as DraftData;

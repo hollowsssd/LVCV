@@ -4,18 +4,19 @@ const applicationController = require('../app/controllers/applicationController'
 const auth = require('../app/middlewares/auth');
 const author = require('../app/middlewares/authorization');
 
-router.use(auth, author('CANDIDATE'));
+// Tất cả route dưới đều yêu cầu đã đăng nhập
+router.use(auth);
 
+// Ứng tuyển job
+router.post('/', author('CANDIDATE'), applicationController.create);
+// Employer xem danh sách ứng viên của 1 job
+router.get('/job/:jobId',author('EMPLOYER'),applicationController.getByJobForEmployer);
+
+// Employer update trạng thái application (accept/reject/review...)
+router.put('/:id', author('EMPLOYER'), applicationController.update);
+
+router.delete('/:id', author('EMPLOYER'), applicationController.delete);
 router.get('/', applicationController.index);
-
 router.get('/:id', applicationController.show);
-
-// ứng tuyển job
-router.post('/', applicationController.create);
-
-router.put('/:id', applicationController.update);
-
-router.delete('/:id', applicationController.delete);
-
 
 module.exports = router;
