@@ -3,8 +3,8 @@
 import axios, { AxiosError } from "axios";
 import Cookies from "js-cookie";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { Pencil, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Pencil, X, Camera } from "lucide-react";
 import Toast from "@/app/components/Toast";
 
 type Role = "candidate" | "employer" | "admin";
@@ -143,6 +143,57 @@ export default function CandidateProfilePage() {
   const [otpInput, setOtpInput] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpSending, setOtpSending] = useState(false);
+
+  // State upload avatar
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Xử lý upload avatar
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !candidate) return;
+
+    // Kiểm tra loại file
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
+    if (!allowedTypes.includes(file.type)) {
+      setToast({ type: "error", message: "Chỉ chấp nhận file JPG, JPEG hoặc PNG" });
+      return;
+    }
+
+    // Kiểm tra kích thước file (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setToast({ type: "error", message: "File quá lớn. Tối đa 5MB" });
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      const res = await axios.put<CandidateMe>(
+        `${API_BASE}/api/candidates/${candidate.id}/avatar`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      setCandidate(res.data);
+      setToast({ type: "success", message: "Cập nhật avatar thành công!" });
+    } catch (err) {
+      setToast({ type: "error", message: pickErr(err, "Không thể upload avatar") });
+    } finally {
+      setAvatarUploading(false);
+      // Reset input sau khi upload
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = "";
+      }
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -464,22 +515,49 @@ export default function CandidateProfilePage() {
           </div>
         ) : (
           <>
-            {/* avatar (nếu có) */}
-            {candidate.avatarUrl && (
-              <div className="flex items-center gap-3">
-                <div className="h-14 w-14 rounded-full overflow-hidden border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900">
+            {/* Avatar section with upload */}
+            <div className="flex items-center gap-4">
+              <div className="relative group">
+                <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={`${API_BASE}${candidate.avatarUrl}`}
+                    src={candidate.avatarUrl?.startsWith('/uploads') ? `${API_BASE}${candidate.avatarUrl}` : '/placeholder.png'}
                     alt="Avatar"
                     className="h-full w-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
                   />
                 </div>
+                {/* Upload overlay */}
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={avatarUploading}
+                  className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  {avatarUploading ? (
+                    <span className="text-white text-xs">Đang tải...</span>
+                  ) : (
+                    <Camera size={20} className="text-white" />
+                  )}
+                </button>
+                {/* Hidden file input */}
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept=".jpg,.jpeg,.png"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  Ảnh đại diện
+                </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Avatar từ hồ sơ Candidate.
+                  Nhấn vào ảnh để thay đổi. Chấp nhận JPG, PNG (tối đa 5MB)
                 </p>
               </div>
-            )}
+            </div>
 
             <div className="grid md:grid-cols-2 gap-4 text-sm">
               <div

@@ -77,6 +77,9 @@ export default function Header() {
   const [notis, setNotis] = useState<Noti[]>([]);
   const [loadingNotis, setLoadingNotis] = useState(false);
 
+  // State cho avatar/logo user
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
+
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
   // đọc cookies mỗi lần route change (đủ dùng)
@@ -160,6 +163,36 @@ export default function Header() {
     const intervalId = setInterval(fetchCount, 60000);
     return () => clearInterval(intervalId);
   }, [user, token, setSocketUnread]);
+
+  // Fetch avatar/logo của user
+  useEffect(() => {
+    if (!user || !token) {
+      setUserAvatarUrl(null);
+      return;
+    }
+
+    const fetchAvatar = async () => {
+      try {
+        const endpoint = user.role === 'candidate'
+          ? `${API_BASE}/api/candidates/me`
+          : `${API_BASE}/api/employers/me`;
+
+        const res = await axios.get(endpoint, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const url = user.role === 'candidate'
+          ? res.data?.avatarUrl
+          : res.data?.logoUrl;
+
+        setUserAvatarUrl(url || null);
+      } catch {
+        setUserAvatarUrl(null);
+      }
+    };
+
+    fetchAvatar();
+  }, [user, token]);
 
   const handleLogout = () => {
     Cookies.remove("token", { path: "/" });
@@ -460,10 +493,13 @@ export default function Header() {
                   className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs hover:border-slate-900
                              dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-200"
                 >
-                  <div className="h-6 w-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[11px]
-                                  dark:bg-slate-100 dark:text-slate-900">
-                    {user.email[0].toUpperCase()}
-                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={userAvatarUrl?.startsWith('/uploads') ? `${API_BASE}${userAvatarUrl}` : '/placeholder.png'}
+                    alt="Avatar"
+                    className="h-6 w-6 rounded-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
+                  />
                   <div className="hidden sm:flex flex-col text-left max-w-[150px]">
                     <span className="text-xs font-medium text-slate-900 dark:text-slate-100 truncate">{user.email}</span>
                     <span className="text-[10px] text-slate-500 uppercase dark:text-slate-400">{user.role}</span>
@@ -488,13 +524,23 @@ export default function Header() {
                           Hồ sơ người dùng
                         </Link>
                       ) : (
-                        <Link
-                          href="/employer/dashboard"
-                          className="block px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-200"
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          Hồ sơ nhà tuyển dụng
-                        </Link>
+                        <>
+                          <Link
+                            href="/employer/profile"
+                            className="block px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-200"
+                            onClick={() => setMenuOpen(false)}
+                          >
+                            Hồ sơ nhà tuyển dụng
+                          </Link>
+
+                          <Link
+                            href="/employer/dashboard"
+                            className="block px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-200"
+                            onClick={() => setMenuOpen(false)}
+                          >
+                            Quản lý công việc
+                          </Link>
+                        </>
                       )}
 
                       <button
