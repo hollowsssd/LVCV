@@ -15,13 +15,7 @@ class employerController {
     }
   }
   // thong tin nha tuyen dung
-async me(req, res) {
-    try {
-      if (!req.user) return res.status(401).json({ message: "Chưa đăng nhập" });
 
-      const employer = await Employer.findOne({
-        where: { userId: req.user.id },
-      });
 
   // Lấy hồ sơ nhà tuyển dụng của user đang đăng nhập
   async me(req, res) {
