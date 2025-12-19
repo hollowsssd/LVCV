@@ -3,6 +3,8 @@ const router = express.Router();
 const employerController = require("../app/controllers/employerController");
 const auth = require("../app/middlewares/auth");
 const authorization = require("../app/middlewares/authorization");
+// lấy thông tin của employer tring
+router.get("/me", auth, authorization("EMPLOYER"), employerController.me);
 
 router.get("/", auth, authorization("EMPLOYER"), employerController.index);
 

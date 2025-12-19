@@ -611,9 +611,9 @@ export default function CandidateDashboard() {
   const owner = useMemo(() => (Cookies.get("email") || "unknown").toLowerCase().trim(), []);
 
   // keys scoped theo user
-  const draftMetaKey = useMemo(() => `${DRAFT_META_KEY}:${owner}`, [owner]);
-  const fileBlobKey = useMemo(() => `${FILE_BLOB_KEY}:${owner}`, [owner]);
-  const savedInfoKey = useMemo(() => `${SAVED_INFO_KEY}:${owner}`, [owner]);
+const draftMetaKey = DRAFT_META_KEY;
+const fileBlobKey = FILE_BLOB_KEY;
+const savedInfoKey = SAVED_INFO_KEY;
 
   const [recommendedJobs, setRecommendedJobs] = useState<Job[]>([]);
   const [cvSaved, setCvSaved] = useState<SavedInfo | null>(null);
@@ -627,14 +627,7 @@ export default function CandidateDashboard() {
   const [loadingRecommendedJobs, setLoadingRecommendedJobs] = useState(false);
 
   // cleanup legacy keys
-  useEffect(() => {
-    try {
-      sessionStorage.removeItem("cv_report_draft");
-      sessionStorage.removeItem("cv_saved_info");
-    } catch {
-      // ignore
-    }
-  }, []);
+
 
   // restore saved info + draft theo user
   useEffect(() => {
@@ -673,7 +666,7 @@ export default function CandidateDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [draftMetaKey, fileBlobKey, savedInfoKey]);
+  }, []);
 
   useEffect(() => {
     (async () => {
