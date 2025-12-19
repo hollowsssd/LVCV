@@ -6,9 +6,9 @@ const { passport, generateToken } = require('../app/config/passport');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-router.post('/register', rateLimit, authController.register);
+router.post('/register', authController.register);
 
-router.post('/login', rateLimit, authController.login);
+router.post('/login', authController.login);
 
 // ==================== Google OAuth Routes ====================
 

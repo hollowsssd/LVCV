@@ -22,6 +22,6 @@ io.on('connection', (socket) => {
         console.log(`User ${socket.userId} disconnected`);
     });
 });
-// Gắn io vào app để sử dụng toàn cục
+// set io vào app để sử dụng toàn cục
 app.set('io', io);
 server.listen(port);

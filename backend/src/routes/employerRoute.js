@@ -5,6 +5,8 @@ const auth = require("../app/middlewares/auth");
 const authorization = require("../app/middlewares/authorization");
 const requireRole = require("../app/middlewares/requireRole");
 const { uploadLogo, handleImageUpload } = require("../app/config/upload");
+// lấy thông tin của employer tring
+router.get("/me", auth, authorization("EMPLOYER"), employerController.me);
 
 router.get("/me", auth, requireRole, authorization("EMPLOYER"), employerController.me);
 

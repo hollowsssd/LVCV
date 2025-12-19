@@ -4,6 +4,7 @@ const jobController = require("../app/controllers/jobController");
 const authorization = require("../app/middlewares/authorization")
 const auth = require("../app/middlewares/auth");
 const requireEmployer = require("../app/middlewares/requireEmployer");
+const rateLimit = require("../app/middlewares/rateLimit")
 
 
 router.get("/", jobController.index);
