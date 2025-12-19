@@ -1,12 +1,13 @@
 "use client";
 
 import type { CvEvaluateReport, DraftData } from "@/app/candidate/cv/types";
+import Cookie from "js-cookie";
 import Link from "next/link";
 import { useState } from "react";
 import Cookies from "js-cookie";
 function readDraftFromSession(): DraftData | null {
   try {
-    const owner = (Cookies.get("email") || "unknown").toLowerCase().trim();
+    const owner = Cookie.get("email");
     const raw = sessionStorage.getItem(`cv_report_draft:${owner}`);
     if (!raw) return null;
 

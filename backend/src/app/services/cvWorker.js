@@ -5,7 +5,8 @@ const readline = require("readline");
 const crypto = require("crypto");
 
 class CvWorker {
-  constructor() {
+  constructor(workerId = 0) {
+    this.workerId = workerId;
     this.proc = null;
     this.rl = null;
 
@@ -14,17 +15,14 @@ class CvWorker {
     this.busy = false;
 
     this.maxQueue = 50;
-    this.timeoutMs = 120_000;
+    this.timeoutMs = 60_000; // Giảm từ 120s xuống 60s
 
-    this.restartDelayMs = 500; // để tránh vòng lặp restart quá nhanh
+    this.restartDelayMs = 500;
     this.start();
   }
 
   _getScriptPath() {
-    // CV_WORKER_SCRIPT=D:\CV\backend\src\app\python\rateCv.py
     if (process.env.CV_WORKER_SCRIPT) return process.env.CV_WORKER_SCRIPT;
-
-    // path python
     return path.join(__dirname, "..", "python", "rateCv.py");
   }
 
@@ -32,29 +30,26 @@ class CvWorker {
     const script = this._getScriptPath();
     const pythonExe = process.env.PYTHON_PATH || "python";
 
-    console.log("[cvWorker] starting...");
-    console.log("[cvWorker] python =", pythonExe);
-    console.log("[cvWorker] script =", script);
+    console.log(`[cvWorker#${this.workerId}] starting...`);
+    console.log(`[cvWorker#${this.workerId}] python =`, pythonExe);
+    console.log(`[cvWorker#${this.workerId}] script =`, script);
 
     this.proc = spawn(pythonExe, ["-u", script], {
       stdio: ["pipe", "pipe", "pipe"],
       env: {
         ...process.env,
-        // Fix charmap/encoding trên Windows
         PYTHONIOENCODING: "utf-8",
         PYTHONUTF8: "1",
       },
       windowsHide: true,
     });
 
-    this.proc.on("spawn", () => console.log("[cvWorker] spawned ok"));
+    this.proc.on("spawn", () => console.log(`[cvWorker#${this.workerId}] spawned ok`));
 
-    // IMPORTANT: bắt lỗi async của stdin để khỏi crash Node
     this.proc.stdin.on("error", (err) => {
-      console.error("[cvWorker stdin error]", err.message);
+      console.error(`[cvWorker#${this.workerId} stdin error]`, err.message);
     });
 
-    // stdout line-by-line (mỗi dòng là 1 JSON)
     this.rl = readline.createInterface({ input: this.proc.stdout });
 
     this.rl.on("line", (line) => {
@@ -79,13 +74,12 @@ class CvWorker {
     });
 
     this.proc.stderr.on("data", (d) => {
-      console.error("[cvWorker stderr]", d.toString());
+      console.error(`[cvWorker#${this.workerId} stderr]`, d.toString());
     });
 
     this.proc.on("exit", (code, sig) => {
-      console.error(`[cvWorker] exited code=${code} sig=${sig}`);
+      console.error(`[cvWorker#${this.workerId}] exited code=${code} sig=${sig}`);
 
-      // reject hết job đang chờ
       for (const [id, job] of this.pending.entries()) {
         clearTimeout(job.timer);
         job.reject(new Error(`Python worker exited (code=${code}, sig=${sig})`));
@@ -93,11 +87,9 @@ class CvWorker {
       this.pending.clear();
       this.busy = false;
 
-      // restart có delay để tránh loop
       setTimeout(() => this.start(), this.restartDelayMs);
     });
 
-    // drain nếu có queue từ trước
     this._drain();
   }
 
@@ -125,7 +117,6 @@ class CvWorker {
     });
   }
 
-
   _drain() {
     if (!this.proc || this.proc.killed) return;
     if (this.busy) return;
@@ -150,7 +141,6 @@ class CvWorker {
       timer: item.timer,
     });
 
-    // Ghi stdin có thể phát lỗi async, nên dùng callback
     this.proc.stdin.write(JSON.stringify(item.payload) + "\n", (err) => {
       if (!err) return;
 
@@ -164,4 +154,52 @@ class CvWorker {
   }
 }
 
-module.exports = new CvWorker();
+/**
+ * Worker Pool - Chạy nhiều Python workers song song
+ * Cấu hình số lượng qua env CV_WORKER_POOL_SIZE (mặc định: 3)
+ */
+class CvWorkerPool {
+  constructor() {
+    const poolSize = parseInt(process.env.CV_WORKER_POOL_SIZE, 10) || 3;
+    console.log(`[CvWorkerPool] Initializing with ${poolSize} workers...`);
+
+    this.workers = [];
+    for (let i = 0; i < poolSize; i++) {
+      this.workers.push(new CvWorker(i));
+    }
+    this.currentIndex = 0;
+  }
+
+  /**
+   * Chọn worker ít bận nhất (least busy) hoặc round-robin nếu tất cả đều busy
+   */
+  _selectWorker() {
+    // Ưu tiên worker không busy
+    for (const worker of this.workers) {
+      if (!worker.busy && worker.queue.length === 0) {
+        return worker;
+      }
+    }
+
+    // Nếu tất cả busy, chọn worker có queue ngắn nhất
+    let minWorker = this.workers[0];
+    let minQueueLen = minWorker.queue.length;
+
+    for (const worker of this.workers) {
+      if (worker.queue.length < minQueueLen) {
+        minWorker = worker;
+        minQueueLen = worker.queue.length;
+      }
+    }
+
+    return minWorker;
+  }
+
+  async runJob(params) {
+    const worker = this._selectWorker();
+    console.log(`[CvWorkerPool] Dispatching to worker#${worker.workerId} (queue: ${worker.queue.length})`);
+    return worker.runJob(params);
+  }
+}
+
+module.exports = new CvWorkerPool();

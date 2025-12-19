@@ -4,7 +4,8 @@ export type Job = {
   id: number;
   title: string;
   description: string;
-  companyName?: string | null;
+  Employer?: { companyName: string };
+  // companyName?: string | null;
   location?: string | null;
   jobType?: string | null;
   experienceRequired?: string | null;
