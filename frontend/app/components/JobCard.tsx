@@ -39,7 +39,7 @@ export default function JobCard({
           </div>
 
           <p className="mt-1 text-xs text-slate-600">
-            {job.companyName || "—"} · {job.location || "—"} · {job.jobType || "—"}
+            {job.Employer?.companyName || "—"} · {job.location || "—"} · {job.jobType || "—"}
           </p>
         </div>
 

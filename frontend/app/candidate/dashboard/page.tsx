@@ -63,12 +63,6 @@ type Cv = {
 
 /* ===================== Const ===================== */
 
-// const mockJobs: Job[] = [
-//   { id: 1, title: "Backend Intern", company: "ABC Software", location: "HCMC", match: 0.91 },
-//   { id: 2, title: "Node.js Developer (Junior)", company: "XYZ Tech", location: "Remote", match: 0.84 },
-//   { id: 3, title: "Fullstack Intern (React/Node)", company: "Cool Startup", location: "HCMC", match: 0.79 },
-// ];
-
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
 const CV_SAVE_ENDPOINT = `${API_BASE}/api/cvs`;
 const CV_RATE_ENDPOINT = `${API_BASE}/api/cvs/rate-cv`;
@@ -907,7 +901,7 @@ const savedInfoKey = SAVED_INFO_KEY;
 
                       <div
                         className="rounded-xl border border-slate-200 bg-white p-3
-                                 dark:border-slate-700 dark:bg-slate-900/70"
+                                 dark:border-slate-700 dFark:bg-slate-900/70"
                       >
                         <p className="font-semibold text-slate-900 mb-1 dark:text-slate-100">
                           Cần cải thiện
@@ -917,10 +911,6 @@ const savedInfoKey = SAVED_INFO_KEY;
                             <li key={s}>{s}</li>
                           ))}
                         </ul>
-
-                        <p className="font-semibold text-slate-900 mb-1 dark:text-slate-100">
-                          {pending.evaluated.recommendQuery}
-                        </p>
                       </div>
                     </div>
                   )}
@@ -1059,7 +1049,7 @@ const savedInfoKey = SAVED_INFO_KEY;
               )}
 
               <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-                * Apply cần CV đã <b>lưu</b> (file). Nếu chưa lưu, hãy bấm "Lưu CV" ở khung bên trái.
+                * Apply cần CV đã <b>lưu</b> (file). Nếu chưa lưu, hãy bấm "Lưu CV" ở khung bên phải.
               </p>
             </section>
           )}
