@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import axios, { AxiosError } from "axios";
 import Cookies from "js-cookie";
 import Toast from "@/app/components/Toast";
+import ScheduleInterviewModal from "@/app/components/ScheduleInterviewModal";
 
 type ToastState = { type: "success" | "error"; message: string } | null;
 type ApiErrorResponse = { message?: string };
@@ -243,6 +244,10 @@ export default function EmployerJobDetailPage() {
   const [apps, setApps] = useState<JobApplicationItem[]>([]);
   const [appsLoading, setAppsLoading] = useState(false);
   const [updatingAppId, setUpdatingAppId] = useState<number | null>(null);
+
+  // State cho Schedule Interview Modal
+  const [interviewModalOpen, setInterviewModalOpen] = useState(false);
+  const [selectedAppForInterview, setSelectedAppForInterview] = useState<JobApplicationItem | null>(null);
 
   const resetFormFromJob = (j: JobDetail) => {
     setForm({
@@ -552,8 +557,8 @@ export default function EmployerJobDetailPage() {
           newStatus === "interview_scheduled"
             ? "Đã hẹn phỏng vấn ứng viên."
             : newStatus === "rejected"
-            ? "Đã từ chối ứng viên."
-            : "Cập nhật trạng thái ứng viên thành công.",
+              ? "Đã từ chối ứng viên."
+              : "Cập nhật trạng thái ứng viên thành công.",
       });
     } catch (error) {
       const err = error as AxiosError<ApiErrorResponse>;
@@ -562,8 +567,7 @@ export default function EmployerJobDetailPage() {
           type: "error",
           message:
             err.response?.data?.message ??
-            `Không thể cập nhật trạng thái ứng viên (HTTP ${
-              err.response?.status ?? "?"
+            `Không thể cập nhật trạng thái ứng viên (HTTP ${err.response?.status ?? "?"
             })`,
         },
         2600
@@ -571,6 +575,29 @@ export default function EmployerJobDetailPage() {
     } finally {
       setUpdatingAppId(null);
     }
+  };
+
+  // Mở modal hẹn phỏng vấn
+  const openInterviewModal = (app: JobApplicationItem) => {
+    setSelectedAppForInterview(app);
+    setInterviewModalOpen(true);
+  };
+
+  // Callback khi tạo interview thành công
+  const handleInterviewSuccess = () => {
+    if (selectedAppForInterview) {
+      setApps((prev) =>
+        prev.map((a) =>
+          a.id === selectedAppForInterview.id
+            ? { ...a, status: "interview_scheduled" }
+            : a
+        )
+      );
+    }
+    showToast({
+      type: "success",
+      message: "Đã tạo lịch phỏng vấn và gửi thông báo cho ứng viên.",
+    });
   };
 
   return (
@@ -900,9 +927,8 @@ export default function EmployerJobDetailPage() {
                         border shadow-sm transition
                         focus:outline-none focus-visible:ring-2
                         disabled:opacity-60 disabled:cursor-not-allowed
-                        ${
-                          String(job.status || "").toUpperCase() === "CLOSED"
-                            ? `
+                        ${String(job.status || "").toUpperCase() === "CLOSED"
+                          ? `
                               border-emerald-200 bg-emerald-50 text-emerald-700
                               hover:bg-emerald-100 hover:border-emerald-300
                               focus-visible:ring-emerald-300/50
@@ -910,7 +936,7 @@ export default function EmployerJobDetailPage() {
                               dark:hover:bg-emerald-950/55 dark:hover:border-emerald-700
                               dark:focus-visible:ring-emerald-500/30
                             `
-                            : `
+                          : `
                               border-rose-200 bg-rose-50 text-rose-700
                               hover:bg-rose-100 hover:border-rose-300
                               focus-visible:ring-rose-300/50
@@ -937,9 +963,8 @@ export default function EmployerJobDetailPage() {
                         border shadow-sm transition
                         focus:outline-none focus-visible:ring-2
                         disabled:cursor-not-allowed disabled:opacity-50
-                        ${
-                          canConfirm
-                            ? `
+                        ${canConfirm
+                          ? `
                             border-emerald-600 bg-emerald-600 text-white
                             hover:bg-emerald-700 hover:border-emerald-700
                             focus-visible:ring-emerald-500
@@ -947,7 +972,7 @@ export default function EmployerJobDetailPage() {
                             dark:hover:bg-emerald-700 dark:hover:border-emerald-700
                             dark:focus-visible:ring-emerald-400
                           `
-                            : `
+                          : `
                             border-slate-300 bg-slate-200 text-slate-700
                             focus-visible:ring-slate-400/60
                             dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200
@@ -1046,19 +1071,14 @@ export default function EmployerJobDetailPage() {
                               Ngày ứng tuyển: {formatDate(a.appliedAt)}
                             </p>
 
-                            
+
 
                             {/* Buttons hành động */}
                             <div className="mt-2 flex flex-wrap gap-2">
                               {/* Hẹn phỏng vấn */}
                               <button
                                 type="button"
-                                onClick={() =>
-                                  updateApplicationStatus(
-                                    a.id,
-                                    "interview_scheduled"
-                                  )
-                                }
+                                onClick={() => openInterviewModal(a)}
                                 disabled={
                                   isUpdating ||
                                   isInterviewed ||
@@ -1067,10 +1087,9 @@ export default function EmployerJobDetailPage() {
                                 className={`
                                   inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium
                                   border transition
-                                  ${
-                                    isInterviewed
-                                      ? "border-emerald-500 bg-emerald-500 text-white opacity-80 cursor-default"
-                                      : "border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600 hover:border-emerald-600"
+                                  ${isInterviewed
+                                    ? "border-emerald-500 bg-emerald-500 text-white opacity-80 cursor-default"
+                                    : "border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600 hover:border-emerald-600"
                                   }
                                   disabled:opacity-60 disabled:cursor-not-allowed
                                 `}
@@ -1078,8 +1097,8 @@ export default function EmployerJobDetailPage() {
                                 {isInterviewed
                                   ? "Đã hẹn phỏng vấn"
                                   : isUpdating
-                                  ? "Đang xử lý..."
-                                  : "Hẹn phỏng vấn"}
+                                    ? "Đang xử lý..."
+                                    : "📅 Hẹn phỏng vấn"}
                               </button>
 
                               {/* Từ chối */}
@@ -1095,10 +1114,9 @@ export default function EmployerJobDetailPage() {
                                 className={`
                                   inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium
                                   border transition
-                                  ${
-                                    isRejected
-                                      ? "border-rose-500 bg-rose-500 text-white opacity-80 cursor-default"
-                                      : "border-rose-500 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:border-rose-600"
+                                  ${isRejected
+                                    ? "border-rose-500 bg-rose-500 text-white opacity-80 cursor-default"
+                                    : "border-rose-500 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:border-rose-600"
                                   }
                                   disabled:opacity-60 disabled:cursor-not-allowed
                                 `}
@@ -1106,15 +1124,15 @@ export default function EmployerJobDetailPage() {
                                 {isRejected
                                   ? "Đã từ chối"
                                   : isUpdating
-                                  ? "Đang xử lý..."
-                                  : "Từ chối"}
+                                    ? "Đang xử lý..."
+                                    : "Từ chối"}
                               </button>
                             </div>
                           </div>
 
                           {/* Thông tin CV */}
                           <div className="text-right text-xs text-slate-500 dark:text-slate-400 space-y-1">
-                            
+
 
                             {a.cv?.title && (
                               <p className="font-medium">
@@ -1156,6 +1174,20 @@ export default function EmployerJobDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Schedule Interview Modal */}
+      <ScheduleInterviewModal
+        open={interviewModalOpen}
+        onClose={() => {
+          setInterviewModalOpen(false);
+          setSelectedAppForInterview(null);
+        }}
+        applicationId={selectedAppForInterview?.id ?? 0}
+        candidateName={selectedAppForInterview?.candidate?.fullName ?? "Ứng viên"}
+        jobTitle={job?.title ?? ""}
+        onSuccess={handleInterviewSuccess}
+        onError={(msg) => showToast({ type: "error", message: msg })}
+      />
     </>
   );
 }
