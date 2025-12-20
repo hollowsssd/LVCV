@@ -1,3 +1,9 @@
+export type Annotation = {
+  text: string;
+  reason: string;
+  severity: "critical" | "warning" | "info";
+};
+
 export type RateCvApiRes = {
   job_title: string;
   muc_do_phu_hop: number;
@@ -14,6 +20,8 @@ export type RateCvApiRes = {
   uu_diem: string[];
   can_cai_thien: string[];
   goi_y_chi_tiet: string;
+  annotations?: Annotation[];
+  annotated_pdf_b64?: string;
 };
 
 export type CvEvaluateReport = {
@@ -26,6 +34,8 @@ export type CvEvaluateReport = {
   fixes: string;            // goi_y_chi_tiet
   detailScores: RateCvApiRes["diem_chi_tiet"];
   recommendQuery: string;   // recommend_query
+  annotations?: Annotation[];
+  annotatedPdfB64?: string;
 };
 
 export type DraftData = {
@@ -46,5 +56,7 @@ export function normalizeRateCv(data: RateCvApiRes): CvEvaluateReport {
     fixes: (data.goi_y_chi_tiet || "").replace(/\r\n/g, "\n").trim(),
     detailScores: data.diem_chi_tiet,
     recommendQuery: data.recommend_query || "",
+    annotations: Array.isArray(data.annotations) ? data.annotations : [],
+    annotatedPdfB64: data.annotated_pdf_b64 || "",
   };
 }

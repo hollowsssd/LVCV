@@ -63,6 +63,12 @@ type Cv = {
 
 /* ===================== Const ===================== */
 
+// const mockJobs: Job[] = [
+//   { id: 1, title: "Backend Intern", company: "ABC Software", location: "HCMC", match: 0.91 },
+//   { id: 2, title: "Node.js Developer (Junior)", company: "XYZ Tech", location: "Remote", match: 0.84 },
+//   { id: 3, title: "Fullstack Intern (React/Node)", company: "Cool Startup", location: "HCMC", match: 0.79 },
+// ];
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
 const CV_SAVE_ENDPOINT = `${API_BASE}/api/cvs`;
 const CV_RATE_ENDPOINT = `${API_BASE}/api/cvs/rate-cv`;
@@ -605,9 +611,9 @@ export default function CandidateDashboard() {
   const owner = useMemo(() => (Cookies.get("email") || "unknown").toLowerCase().trim(), []);
 
   // keys scoped theo user
-const draftMetaKey = DRAFT_META_KEY;
-const fileBlobKey = FILE_BLOB_KEY;
-const savedInfoKey = SAVED_INFO_KEY;
+  const draftMetaKey = useMemo(() => `${DRAFT_META_KEY}:${owner}`, [owner]);
+  const fileBlobKey = useMemo(() => `${FILE_BLOB_KEY}:${owner}`, [owner]);
+  const savedInfoKey = useMemo(() => `${SAVED_INFO_KEY}:${owner}`, [owner]);
 
   const [recommendedJobs, setRecommendedJobs] = useState<Job[]>([]);
   const [cvSaved, setCvSaved] = useState<SavedInfo | null>(null);
@@ -621,7 +627,14 @@ const savedInfoKey = SAVED_INFO_KEY;
   const [loadingRecommendedJobs, setLoadingRecommendedJobs] = useState(false);
 
   // cleanup legacy keys
-
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem("cv_report_draft");
+      sessionStorage.removeItem("cv_saved_info");
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // restore saved info + draft theo user
   useEffect(() => {
@@ -660,7 +673,7 @@ const savedInfoKey = SAVED_INFO_KEY;
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [draftMetaKey, fileBlobKey, savedInfoKey]);
 
   useEffect(() => {
     (async () => {
@@ -901,7 +914,7 @@ const savedInfoKey = SAVED_INFO_KEY;
 
                       <div
                         className="rounded-xl border border-slate-200 bg-white p-3
-                                 dark:border-slate-700 dFark:bg-slate-900/70"
+                                 dark:border-slate-700 dark:bg-slate-900/70"
                       >
                         <p className="font-semibold text-slate-900 mb-1 dark:text-slate-100">
                           Cần cải thiện
@@ -911,9 +924,21 @@ const savedInfoKey = SAVED_INFO_KEY;
                             <li key={s}>{s}</li>
                           ))}
                         </ul>
+
+                        <p className="font-semibold text-slate-900 mb-1 dark:text-slate-100">
+                          {pending.evaluated.recommendQuery}
+                        </p>
                       </div>
                     </div>
                   )}
+
+                {/* Hint about annotated PDF in detail page */}
+                {pending.evaluated.annotatedPdfB64 && (
+                  <div className="rounded-xl border border-dashed border-rose-300 bg-rose-50/50 px-4 py-2 text-xs text-rose-700
+                                 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
+                    📝 CV đã được đánh dấu highlight. Bấm <b>Xem chi tiết</b> để xem PDF và danh sách các vị trí cần sửa.
+                  </div>
+                )}
 
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap gap-2">
