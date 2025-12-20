@@ -1,6 +1,7 @@
 "use client";
 
 import type { CvEvaluateReport, DraftData } from "@/app/candidate/cv/types";
+import Cookie from "js-cookie";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -8,12 +9,17 @@ import { useState } from "react";
 
 function readDraftFromSession(): DraftData | null {
   try {
-    const raw = sessionStorage.getItem(`cv_report_draft`);
+    const owner = Cookie.get("email");
+    const raw = sessionStorage.getItem(`cv_report_draft:${owner}`);
     if (!raw) return null;
 
     const parsed = JSON.parse(raw) as DraftData;
     if (!parsed || !parsed.report) return null;
 
+    if (!parsed) return null;
+    if (!parsed.report) return null;
+
+    // validate để tránh crash
     const r = parsed.report as CvEvaluateReport;
     if (typeof r.score !== "number") return null;
     if (typeof r.fitScore !== "number") return null;
@@ -453,6 +459,94 @@ export default function CvDraftDetailPage() {
           )}
         </aside>
       </div>
+
+      {/* CV đã đánh dấu + Annotations - Split Layout */}
+      {report.annotatedPdfB64 && (
+        <section className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm space-y-4
+                            dark:border-slate-800 dark:bg-slate-900/80">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            📝 CV đã đánh dấu & Các vị trí cần sửa
+          </h2>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Left: PDF Viewer */}
+            <div className="space-y-3">
+              <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Xem trước CV (có highlight)
+              </p>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden
+                              dark:border-slate-700 dark:bg-slate-900/60">
+                <iframe
+                  src={`data:application/pdf;base64,${report.annotatedPdfB64}`}
+                  className="w-full h-[500px]"
+                  title="Annotated CV Preview"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const pdfB64 = report.annotatedPdfB64;
+                  if (!pdfB64) return;
+                  const blob = new Blob(
+                    [Uint8Array.from(atob(pdfB64), c => c.charCodeAt(0))],
+                    { type: "application/pdf" }
+                  );
+                  const url = URL.createObjectURL(blob);
+                  window.open(url, "_blank");
+                }}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:border-slate-900 transition
+                           dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-300"
+              >
+                🔗 Mở PDF trong tab mới
+              </button>
+            </div>
+
+            {/* Right: Annotations List */}
+            <div className="space-y-3">
+              <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Các vị trí cần sửa ({report.annotations?.length || 0})
+              </p>
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3 max-h-[540px] overflow-y-auto
+                              dark:border-slate-700 dark:bg-slate-900/60">
+                {report.annotations && report.annotations.length > 0 ? (
+                  report.annotations.map((ann, idx) => (
+                    <div
+                      key={idx}
+                      className={`rounded-xl p-3 border-l-4 ${ann.severity === "critical"
+                        ? "border-l-red-500 bg-red-50 dark:bg-red-950/40"
+                        : ann.severity === "warning"
+                          ? "border-l-amber-500 bg-amber-50 dark:bg-amber-950/40"
+                          : "border-l-blue-500 bg-blue-50 dark:bg-blue-950/40"
+                        }`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <p className="font-medium text-xs text-slate-800 dark:text-slate-200">
+                          &quot;{ann.text}&quot;
+                        </p>
+                        <span className={`shrink-0 text-[10px] px-2 py-0.5 rounded-full font-medium ${ann.severity === "critical"
+                          ? "bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200"
+                          : ann.severity === "warning"
+                            ? "bg-amber-200 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+                            : "bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                          }`}>
+                          {ann.severity === "critical" ? "Phải sửa" : ann.severity === "warning" ? "Nên sửa" : "Gợi ý"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                        {ann.reason}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-8">
+                    Không có annotation nào
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between">

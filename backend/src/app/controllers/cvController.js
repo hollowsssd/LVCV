@@ -92,7 +92,7 @@ class cvController {
         .json({ message: "Lỗi lấy CV của bạn", detail: e.message });
     }
   }
-  
+
 
   async create(req, res) {
     try {
@@ -150,6 +150,8 @@ class cvController {
       return res.status(500).json({ error: "Lỗi xóa cv" });
     }
   }
+
+
   async rateCV(req, res) {
     try {
       if (!req.file) return res.status(400).json({ message: "Thiếu file CV" });
