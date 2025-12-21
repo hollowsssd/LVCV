@@ -75,7 +75,7 @@ exports.verifyOtp = async (req, res) => {
     }
 };
 
-// Get verification status
+// Lấy trạng thái xác thực email
 exports.getStatus = async (req, res) => {
     try {
         const user = await User.findByPk(req.user.id, {
