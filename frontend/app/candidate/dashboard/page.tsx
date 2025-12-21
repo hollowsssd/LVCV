@@ -925,9 +925,7 @@ export default function CandidateDashboard() {
                           ))}
                         </ul>
 
-                        <p className="font-semibold text-slate-900 mb-1 dark:text-slate-100">
-                          {pending.evaluated.recommendQuery}
-                        </p>
+                       
                       </div>
                     </div>
                   )}
@@ -1073,9 +1071,7 @@ export default function CandidateDashboard() {
                 </div>
               )}
 
-              <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-                * Apply cần CV đã <b>lưu</b> (file). Nếu chưa lưu, hãy bấm "Lưu CV" ở khung bên phải.
-              </p>
+             
             </section>
           )}
         </div>
