@@ -151,6 +151,27 @@ class cvController {
     }
   }
 
+  //set default CV
+  async setDefault(req, res) {
+    try {
+      const cv = await Cv.findByPk(req.params.id);
+      if (!cv) return res.status(404).json({ message: "Không tìm thấy CV" });
+
+      // Bỏ default tất cả CV khác
+      await Cv.update(
+        { isDefault: false },
+        { where: { candidateId: req.candidate.id } }
+      );
+
+      // Đặt CV này làm default
+      await cv.update({ isDefault: true });
+
+      return res.json({ message: "Đã đặt CV làm mặc định", cv });
+    } catch (e) {
+      return res.status(500).json({ error: "Lỗi đặt CV mặc định", detail: e.message });
+    }
+  }
+
 
   async rateCV(req, res) {
     try {

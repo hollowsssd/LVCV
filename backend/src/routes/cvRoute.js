@@ -132,6 +132,8 @@ router.get("/:id", cvController.show);
 router.post("/", requireCandidate, handleUpload(true), cvController.create);
 router.put("/:id", requireCandidate, handleUpload(false), cvController.update);
 
+router.put("/:id/set-default", requireCandidate, cvController.setDefault);
+
 router.delete("/:id", requireCandidate, cvController.delete);
 
 module.exports = router;

@@ -434,6 +434,10 @@ export default function JobsPage() {
   const [q, setQ] = useState("");
   const [onlyOpen, setOnlyOpen] = useState(true);
 
+  // Pagination
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailJob, setDetailJob] = useState<Job | null>(null);
 
@@ -479,6 +483,15 @@ export default function JobsPage() {
       return hay.includes(s);
     });
   }, [jobs, q]);
+
+  // Reset page khi filter thay đổi
+  useEffect(() => {
+    setPage(1);
+  }, [q, onlyOpen]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const pagedJobs = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   // chỉ candidate mới thấy
   if (role && role !== "candidate") {
@@ -615,69 +628,98 @@ export default function JobsPage() {
               Không có job phù hợp.
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-3">
-              {filtered.map((job) => (
-                <div
-                  key={job.id}
-                  className="rounded-2xl border border-slate-200 bg-slate-50/60 px-4 py-3 hover:border-slate-900 transition
-                             dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-slate-300"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate dark:text-slate-100">
-                        {job.title}
-                      </p>
+            <>
+              <div className="grid md:grid-cols-2 gap-3">
+                {pagedJobs.map((job) => (
+                  <div
+                    key={job.id}
+                    className="rounded-2xl border border-slate-200 bg-slate-50/60 px-4 py-3 hover:border-slate-900 transition
+                               dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-slate-300"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 truncate dark:text-slate-100">
+                          {job.title}
+                        </p>
 
-                      <p className="text-[11px] text-slate-500 truncate dark:text-slate-400">
-                        {job.companyName || "—"} · {job.location || "—"} ·{" "}
-                        {job.jobType || "—"}
-                      </p>
+                        <p className="text-[11px] text-slate-500 truncate dark:text-slate-400">
+                          {job.companyName || "—"} · {job.location || "—"} ·{" "}
+                          {job.jobType || "—"}
+                        </p>
 
-                      <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                        Kinh nghiệm:{" "}
-                        <span className="text-slate-700 font-medium dark:text-slate-100">
-                          {job.experienceRequired || "—"}
-                        </span>{" "}
-                        · Hạn:{" "}
-                        <span className="text-slate-700 font-medium dark:text-slate-100">
-                          {job.deadline || "—"}
-                        </span>
-                      </p>
+                        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                          Kinh nghiệm:{" "}
+                          <span className="text-slate-700 font-medium dark:text-slate-100">
+                            {job.experienceRequired || "—"}
+                          </span>{" "}
+                          · Hạn:{" "}
+                          <span className="text-slate-700 font-medium dark:text-slate-100">
+                            {job.deadline || "—"}
+                          </span>
+                        </p>
 
-                      <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                        Lương:{" "}
-                        <span className="text-slate-700 font-medium dark:text-slate-100">
-                          {formatSalary(job)}
-                        </span>{" "}
-                        · Tạo ngày {fmtDate(job.createdAt)}
-                      </p>
+                        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                          Lương:{" "}
+                          <span className="text-slate-700 font-medium dark:text-slate-100">
+                            {formatSalary(job)}
+                          </span>{" "}
+                          · Tạo ngày {fmtDate(job.createdAt)}
+                        </p>
+                      </div>
+
+                      <StatusPill status={job.status} />
                     </div>
 
-                    <StatusPill status={job.status} />
-                  </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openDetail(job)}
+                        className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] hover:border-slate-900
+                                   dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-300"
+                      >
+                        Xem chi tiết
+                      </button>
 
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openDetail(job)}
-                      className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] hover:border-slate-900
-                                 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-300"
-                    >
-                      Xem chi tiết
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => openApply(job)}
-                      className="rounded-full bg-slate-900 text-white px-3 py-1 text-[11px] hover:bg-slate-800
-                                 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                    >
-                      Apply CV
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => openApply(job)}
+                        className="rounded-full bg-slate-900 text-white px-3 py-1 text-[11px] hover:bg-slate-800
+                                   dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+                      >
+                        Apply CV
+                      </button>
+                    </div>
                   </div>
+                ))}
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium hover:border-slate-900 disabled:opacity-40 disabled:cursor-not-allowed
+                               dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-300"
+                  >
+                    ← Trước
+                  </button>
+                  <span className="text-xs text-slate-600 dark:text-slate-400">
+                    Trang {page} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium hover:border-slate-900 disabled:opacity-40 disabled:cursor-not-allowed
+                               dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-300"
+                  >
+                    Sau →
+                  </button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </section>
       </div>

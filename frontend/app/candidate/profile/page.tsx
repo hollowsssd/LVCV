@@ -736,6 +736,32 @@ export default function CandidateProfilePage() {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {!cv.isDefault && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await axios.put(
+                              `${API_BASE}/api/cvs/${cv.id}/set-default`,
+                              {},
+                              { headers: { Authorization: `Bearer ${token}` } }
+                            );
+                            // Refresh danh sách CV
+                            const res = await axios.get<CvItem[]>(`${API_BASE}/api/cvs/mine`, {
+                              headers: { Authorization: `Bearer ${token}` },
+                            });
+                            setCvs(Array.isArray(res.data) ? res.data : []);
+                            setToast({ type: "success", message: "Đã đặt CV làm mặc định!" });
+                          } catch (err) {
+                            setToast({ type: "error", message: pickErr(err, "Không thể đặt mặc định") });
+                          }
+                        }}
+                        className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-100
+                                   dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 dark:hover:bg-emerald-900/60"
+                      >
+                        Đặt mặc định
+                      </button>
+                    )}
                     {fileHref ? (
                       <a
                         href={fileHref}
@@ -751,6 +777,25 @@ export default function CandidateProfilePage() {
                         Không có fileUrl
                       </span>
                     )}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!confirm(`Bạn có chắc muốn xóa "${title}"?`)) return;
+                        try {
+                          await axios.delete(`${API_BASE}/api/cvs/${cv.id}`, {
+                            headers: { Authorization: `Bearer ${token}` },
+                          });
+                          setCvs((prev) => prev.filter((c) => c.id !== cv.id));
+                          setToast({ type: "success", message: "Đã xóa CV!" });
+                        } catch (err) {
+                          setToast({ type: "error", message: pickErr(err, "Không thể xóa CV") });
+                        }
+                      }}
+                      className="rounded-full border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 hover:bg-rose-100
+                                 dark:border-rose-700 dark:bg-rose-950/50 dark:text-rose-300 dark:hover:bg-rose-900/60"
+                    >
+                      Xóa
+                    </button>
                   </div>
                 </div>
               );
