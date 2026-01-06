@@ -162,7 +162,7 @@ class applicationController {
       if (job && job.Employer) {
         const io = req.app.get("io");
 
-        // Gửi thông báo cho Employer (chủ job)
+        // Gửi thông báo cho Employer
         await notificationService.createAndSend(io, {
           userId: job.Employer.userId,
           type: "new_application",
@@ -219,7 +219,7 @@ class applicationController {
           case "rejected":
             notificationType = "application_rejected";
             title = "Thông báo về đơn ứng tuyển";
-            message = `Đơn ứng tuyển vị trí "${application.Job?.title}" không được chọn lần này.`;
+            message = `Nhà tuyển dụng cho rằng bạn không phù hợp với vị trí "${application.Job?.title}" .`;
             break;
           case "reviewed":
           case "reviewing":

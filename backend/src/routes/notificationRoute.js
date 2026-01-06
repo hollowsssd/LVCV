@@ -4,7 +4,7 @@ const notificationController = require('../app/controllers/notificationControlle
 const auth = require('../app/middlewares/auth');
 const author = require('../app/middlewares/authorization');
 
-router.use(auth, author('EMPLOYER' || 'CANDIDATE'));
+router.use(auth, author(['EMPLOYER','CANDIDATE']));
 
 router.get('/', notificationController.index);
 

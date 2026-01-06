@@ -13,11 +13,11 @@ app.use(cors(corsOption));
 
 app.use(express.urlencoded({ extended: true }));
 
-// Initialize Passport (không cần session vì dùng JWT)
+// Initialize Passport
 app.use(passport.initialize());
 
-// serve uploads
-const PROJECT_ROOT = path.resolve(__dirname, ".."); // vì server.js nằm trong backend
+// server uploads
+const PROJECT_ROOT = path.resolve(__dirname, ".."); // server.js nằm trong backend
 const UPLOADS_DIR = path.join(PROJECT_ROOT, "uploads");
 
 app.use("/uploads", express.static(UPLOADS_DIR));

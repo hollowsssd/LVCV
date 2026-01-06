@@ -1,5 +1,5 @@
-const { Job, Employer } = require("../../../models");
-const { Op } = require("sequelize");
+const { Job, Employer, Application } = require("../../../models");
+const { Op, fn, col } = require("sequelize");
 
 
 class jobController {
@@ -57,6 +57,20 @@ class jobController {
     try {
       const jobs = await Job.findAll({
         where: { employerId: req.employer.id },
+        attributes: {
+          include: [
+            // Đếm số applications cho mỗi job
+            [fn('COUNT', col('Applications.id')), 'candidates']
+          ]
+        },
+        include: [
+          {
+            model: Application,
+            as: 'Applications',
+            attributes: [], //  dùng để count
+          }
+        ],
+        group: ['Job.id'], // Group theo Job.id để COUNT
         order: [["createdAt", "DESC"]], // mới nhất lên đầu
       });
 

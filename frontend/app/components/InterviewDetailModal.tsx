@@ -69,8 +69,10 @@ export default function InterviewDetailModal({
     };
 
     const { date, time } = formatDateTime(interview.scheduledAt);
-    const isUpcoming = new Date(interview.scheduledAt) > new Date();
-    const isPast = !isUpcoming;
+    const scheduledTime = new Date(interview.scheduledAt);
+    const oneHourAfter = new Date(scheduledTime.getTime() + 60 * 60 * 1000); // 1 tiếng sau giờ hẹn
+    const isLinkActive = new Date() < oneHourAfter; // Link còn hoạt động trong vòng 1 tiếng sau giờ hẹn
+    const isPast = new Date() > oneHourAfter;
 
     const statusBadge = () => {
         if (interview.status === "cancelled") {
@@ -179,7 +181,7 @@ export default function InterviewDetailModal({
                         </div>
 
                         {/* Link Jitsi */}
-                        {isUpcoming && interview.status === "scheduled" ? (
+                        {isLinkActive && interview.status === "scheduled" ? (
                             <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4
                                 dark:border-blue-900/60 dark:bg-blue-950/40">
                                 <p className="text-[11px] text-blue-600 dark:text-blue-400 font-medium">

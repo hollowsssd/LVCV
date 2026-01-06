@@ -19,9 +19,11 @@ type Noti = {
   id: number;
   title: string;
   message: string;
-  link?: string | null;
   isRead: boolean;
   createdAt?: string;
+  data?: {
+    jobId?: number,
+  };
 };
 
 type UnreadCountRes = { count: number };
@@ -144,8 +146,6 @@ export default function Header() {
       return;
     }
 
-    let alive = true;
-
     const fetchCount = async () => {
       try {
         const res = await axios.get<UnreadCountRes>(`${API_BASE}/api/notifications/unread-count`, {
@@ -229,6 +229,7 @@ export default function Header() {
       const res = await axios.get(`${API_BASE}/api/notifications?limit=10`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      // console.log('res :>> ', res);
 
       // Lấy data từ API (có thể là array hoặc object với key notifications)
       const apiNotis = res.data?.notifications || res.data || [];
@@ -276,12 +277,20 @@ export default function Header() {
         // Cập nhật local state
         setNotis((prev) => prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
       }
+      if (n.title === "📅 Lịch phỏng vấn mới!") {
+        router.push('/candidate/profile#calendar-interview');
+      }
+      if (n.title === "Có ứng viên mới!") {
+        const str = `${n.data}`;
+        const object = JSON.parse(str);
+        router.push(`/employer/jobs/${object.jobId}`);
+        // console.log(`/ employer / job / ${object.jobId} `);
+      }
     } catch {
       // ignore
     }
 
     setNotiOpen(false);
-    if (n.link) router.push(n.link);
   };
 
   const isCandidate = user?.role === "candidate";
@@ -495,7 +504,7 @@ export default function Header() {
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={userAvatarUrl?.startsWith('/uploads') ? `${API_BASE}${userAvatarUrl}` : '/placeholder.png'}
+                    src={userAvatarUrl?.startsWith('/uploads') ? `${API_BASE}${userAvatarUrl} ` : '/placeholder.png'}
                     alt="Avatar"
                     className="h-6 w-6 rounded-full object-cover"
                     onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}

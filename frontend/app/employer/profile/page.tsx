@@ -1,12 +1,11 @@
 "use client";
 
+import Toast from "@/app/components/Toast";
 import axios, { AxiosError } from "axios";
 import Cookies from "js-cookie";
+import { Camera, Pencil, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pencil, X, Camera, Building2 } from "lucide-react";
-import Toast from "@/app/components/Toast";
-import InterviewDetailModal from "@/app/components/InterviewDetailModal";
 
 type Role = "candidate" | "employer" | "admin";
 
@@ -32,32 +31,6 @@ type EmployerMe = {
 const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
 
-type InterviewItem = {
-    id: number;
-    applicationId: number;
-    scheduledAt: string;
-    jitsiRoomUrl: string;
-    notes: string | null;
-    status: string;
-    isUpcoming: boolean;
-    candidate: {
-        id: number;
-        fullName: string;
-        phone?: string;
-        email?: string;
-        avatarUrl?: string;
-    } | null;
-    job: {
-        id: number;
-        title: string;
-    } | null;
-    createdAt: string;
-};
-
-function cn(...classes: Array<string | false | null | undefined>) {
-    return classes.filter(Boolean).join(" ");
-}
-
 function safeText(v: unknown, fallback = "—"): string {
     if (typeof v === "string") {
         const t = v.trim();
@@ -66,6 +39,10 @@ function safeText(v: unknown, fallback = "—"): string {
     if (typeof v === "number") return String(v);
     if (typeof v === "boolean") return String(v);
     return fallback;
+}
+
+function cn(...classes: Array<string | false | null | undefined>) {
+    return classes.filter(Boolean).join(" ");
 }
 
 function fmtDate(iso: string | null | undefined): string {
@@ -130,12 +107,6 @@ export default function EmployerProfilePage() {
     // State upload logo
     const [logoUploading, setLogoUploading] = useState(false);
     const logoInputRef = useRef<HTMLInputElement>(null);
-
-    // State for interviews
-    const [interviews, setInterviews] = useState<InterviewItem[]>([]);
-    const [interviewsLoading, setInterviewsLoading] = useState(false);
-    const [selectedInterview, setSelectedInterview] = useState<InterviewItem | null>(null);
-    const [showInterviewModal, setShowInterviewModal] = useState(false);
 
     // Xử lý upload logo
     const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -213,26 +184,6 @@ export default function EmployerProfilePage() {
             mounted = false;
         };
     }, [token, role]);
-
-    // Fetch interviews
-    useEffect(() => {
-        const fetchInterviews = async () => {
-            if (!token) return;
-            try {
-                setInterviewsLoading(true);
-                const res = await axios.get<{ upcoming: InterviewItem[]; past: InterviewItem[] }>(
-                    `${API_BASE}/api/interviews/employer-list`,
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-                setInterviews([...(res.data.upcoming || []), ...(res.data.past || [])]);
-            } catch {
-                // ignore - interviews section is optional
-            } finally {
-                setInterviewsLoading(false);
-            }
-        };
-        fetchInterviews();
-    }, [token]);
 
     // chặn truy cập
     if (!token || (role && role !== "employer")) {
@@ -486,106 +437,6 @@ export default function EmployerProfilePage() {
                 )}
             </section>
 
-            {/* Interview Schedule Section */}
-            <section
-                className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm space-y-4
-                   dark:border-slate-800 dark:bg-slate-900/70"
-            >
-                <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        📋 Lịch phỏng vấn đã hẹn
-                    </h2>
-                </div>
-
-                {interviewsLoading ? (
-                    <div className="text-sm text-slate-500 dark:text-slate-400">
-                        Đang tải lịch phỏng vấn...
-                    </div>
-                ) : interviews.length === 0 ? (
-                    <div
-                        className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600
-                       dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
-                    >
-                        Chưa có lịch phỏng vấn nào.
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        {interviews.map((iv) => {
-                            const scheduleDate = new Date(iv.scheduledAt);
-                            const isUpcoming = scheduleDate > new Date() && iv.status === 'scheduled';
-                            const dateStr = scheduleDate.toLocaleDateString('vi-VN', {
-                                weekday: 'short',
-                                day: 'numeric',
-                                month: 'short',
-                            });
-                            const timeStr = scheduleDate.toLocaleTimeString('vi-VN', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                            });
-
-                            return (
-                                <div
-                                    key={iv.id}
-                                    className={cn(
-                                        "rounded-2xl border p-4 cursor-pointer transition hover:shadow-md",
-                                        isUpcoming
-                                            ? "border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/30"
-                                            : "border-slate-200 bg-slate-50/60 dark:border-slate-700 dark:bg-slate-900/60"
-                                    )}
-                                    onClick={() => {
-                                        setSelectedInterview(iv);
-                                        setShowInterviewModal(true);
-                                    }}
-                                >
-                                    <div className="flex flex-wrap items-start justify-between gap-3">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                    {iv.candidate?.fullName || "Ứng viên không xác định"}
-                                                </p>
-                                                {isUpcoming && (
-                                                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium
-                                                           border border-emerald-500 bg-emerald-500 text-white">
-                                                        Sắp diễn ra
-                                                    </span>
-                                                )}
-                                                {iv.status === 'cancelled' && (
-                                                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium
-                                                           border border-rose-500 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
-                                                        Đã huỷ
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                Vị trí: {iv.job?.title || "—"}
-                                            </p>
-                                            <p className="text-xs text-slate-600 dark:text-slate-300">
-                                                📅 {dateStr} lúc {timeStr}
-                                            </p>
-                                        </div>
-                                        <div className="text-right">
-                                            {isUpcoming && (
-                                                <a
-                                                    href={iv.jitsiRoomUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    className="inline-flex items-center gap-1 rounded-full bg-blue-600 text-white
-                                                     px-3 py-1.5 text-xs font-medium hover:bg-blue-700
-                                                     dark:bg-blue-500 dark:hover:bg-blue-600"
-                                                >
-                                                    🌐 Tham gia
-                                                </a>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </section>
-
             {/* Edit Profile Modal */}
             {showEditModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -725,17 +576,6 @@ export default function EmployerProfilePage() {
                     onClose={() => setToast(null)}
                 />
             )}
-
-            {/* Interview Detail Modal */}
-            <InterviewDetailModal
-                open={showInterviewModal}
-                onClose={() => {
-                    setShowInterviewModal(false);
-                    setSelectedInterview(null);
-                }}
-                interview={selectedInterview}
-                viewAs="employer"
-            />
         </div>
     );
 }

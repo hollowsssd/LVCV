@@ -1,12 +1,12 @@
 "use client";
 
+import InterviewDetailModal from "@/app/components/InterviewDetailModal";
+import Toast from "@/app/components/Toast";
 import axios, { AxiosError } from "axios";
 import Cookies from "js-cookie";
+import { Camera, Pencil, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pencil, X, Camera } from "lucide-react";
-import Toast from "@/app/components/Toast";
-import InterviewDetailModal from "@/app/components/InterviewDetailModal";
 
 type Role = "candidate" | "employer" | "admin";
 
@@ -310,6 +310,21 @@ export default function CandidateProfilePage() {
     };
     fetchInterviews();
   }, [token]);
+
+  // Scroll to anchor when navigating from other pages with hash
+  useEffect(() => {
+    if (typeof window === "undefined" || loading || interviewsLoading) return;
+
+    const hash = window.location.hash;
+    if (hash === "#calendar-interview") {
+      setTimeout(() => {
+        const el = document.getElementById("calendar-interview");
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 100);
+    }
+  }, [loading, interviewsLoading]);
 
   // Send OTP handler
   const handleSendOtp = async () => {
@@ -746,6 +761,7 @@ export default function CandidateProfilePage() {
 
       {/* Interview Schedule Section */}
       <section
+        id="calendar-interview"
         className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm space-y-4
                    dark:border-slate-800 dark:bg-slate-900/70"
       >
