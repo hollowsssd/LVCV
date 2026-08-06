@@ -2,9 +2,7 @@
 
 LVCV là một nền tảng tuyển dụng có tích hợp AI. Ứng viên có thể upload CV để được chấm điểm, nhận góp ý và tìm job phù hợp. Nhà tuyển dụng có thể đăng tin, xem ứng viên ứng tuyển, cập nhật trạng thái hồ sơ và đặt lịch phỏng vấn.
 
-Nói ngắn gọn: project này là một job portal nhỏ, nhưng có thêm lớp AI để giúp CV và job “gặp nhau” hợp lý hơn.
-
-## Đọc nhanh theo từng phần
+## Folder
 
 - [Frontend Next.js](frontend/README.md): giao diện web cho candidate/employer, cách chạy và cấu hình API URL.
 - [Backend Express](backend/README.md): API, database, upload file, auth, Socket.IO và chấm điểm CV bằng Python/Gemini.
